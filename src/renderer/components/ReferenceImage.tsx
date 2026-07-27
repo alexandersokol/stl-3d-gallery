@@ -66,6 +66,18 @@ export default function ReferenceImage({ modelPath }: ReferenceImageProps) {
   // leaks across attach/detach/path-change transitions).
   const objectUrlRef = useRef<string | null>(null)
 
+  // Always holds the *current* modelPath, independent of any render's
+  // closure. `attach()` captures modelPath at call time and, after every
+  // await, compares against this ref -- if the user has switched models in
+  // the meantime the in-flight write's result must never be applied (see
+  // module comment / Task 6.1 code review). InfoPanel does not remount
+  // ReferenceImage on model switch, so this guard is the only thing standing
+  // between a slow attach() and it rendering on the wrong model's panel.
+  const currentPathRef = useRef(modelPath)
+  useEffect(() => {
+    currentPathRef.current = modelPath
+  }, [modelPath])
+
   const clearPreview = () => {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current)
@@ -143,14 +155,26 @@ export default function ReferenceImage({ modelPath }: ReferenceImageProps) {
   }, [modelPath])
 
   const attach = async (file: File, ext: string) => {
+    // Capture the model this attach was started for. Every await below is a
+    // point where the user could have switched to a different model's panel
+    // (InfoPanel doesn't remount ReferenceImage on switch) -- if that
+    // happened, this attach's result belongs to a panel that's no longer on
+    // screen and must not touch state.
+    const capturedPath = modelPath
+    const isStale = () => currentPathRef.current !== capturedPath
     try {
       const bytes = await file.arrayBuffer()
-      const storedName = await api.writeLinkedImage(modelPath, bytes, ext)
+      if (isStale()) return
+
+      const storedName = await api.writeLinkedImage(capturedPath, bytes, ext)
+      if (isStale()) return // don't create an object URL for a stale result
+
       showPreviewFromBytes(bytes, MIME_BY_EXT[ext] ?? file.type)
       setError(null)
-      syncLinkedImageInStore(modelPath, storedName)
+      syncLinkedImageInStore(capturedPath, storedName)
     } catch (err) {
-      console.error(`ReferenceImage: failed to attach image for ${modelPath}`, err)
+      if (isStale()) return
+      console.error(`ReferenceImage: failed to attach image for ${capturedPath}`, err)
       setError('Failed to attach reference image')
     }
   }
@@ -185,7 +209,7 @@ export default function ReferenceImage({ modelPath }: ReferenceImageProps) {
   }
 
   return (
-    <div className="reference-image">
+    <div className="reference-image" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
       {previewUrl ? (
         <div className="reference-image-attached">
           <button
@@ -195,18 +219,14 @@ export default function ReferenceImage({ modelPath }: ReferenceImageProps) {
             aria-label="Enlarge reference image"
           >
             <img src={previewUrl} alt="Reference" className="reference-image-preview" />
+            {dragOver && <div className="reference-image-drop-hint">Drop to replace</div>}
           </button>
           <button type="button" className="reference-image-detach" onClick={() => void handleDetach()}>
             Detach
           </button>
         </div>
       ) : (
-        <div
-          className={`reference-image-dropzone${dragOver ? ' reference-image-dropzone-active' : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
+        <div className={`reference-image-dropzone${dragOver ? ' reference-image-dropzone-active' : ''}`}>
           Drag an image here, or paste (⌘/Ctrl+V)
         </div>
       )}

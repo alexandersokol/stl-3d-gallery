@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 
 const readLinkedImage = vi.fn()
 const writeLinkedImage = vi.fn()
@@ -134,6 +134,133 @@ describe('<ReferenceImage/>', () => {
     await waitFor(() => expect(removeLinkedImage).toHaveBeenCalledWith('/root/a.stl'))
     await screen.findByText(/Drag an image here/)
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('drop writes webp with the correct ext', async () => {
+    render(<ReferenceImage modelPath="/root/a.stl" />)
+    await waitFor(() => expect(readLinkedImage).toHaveBeenCalled())
+    const dropzone = await screen.findByText(/Drag an image here/)
+
+    const file = makeFile('photo.webp', 'image/webp')
+    fireEvent.drop(dropzone, { dataTransfer: { files: [file] } })
+
+    await waitFor(() => expect(writeLinkedImage).toHaveBeenCalledTimes(1))
+    const [path, bytes, ext] = writeLinkedImage.mock.calls[0]
+    expect(path).toBe('/root/a.stl')
+    expect(bytes).toBeInstanceOf(ArrayBuffer)
+    expect(ext).toBe('webp')
+
+    await screen.findByRole('img', { name: 'Reference' })
+  })
+
+  it('drop writes gif with the correct ext', async () => {
+    render(<ReferenceImage modelPath="/root/a.stl" />)
+    await waitFor(() => expect(readLinkedImage).toHaveBeenCalled())
+    const dropzone = await screen.findByText(/Drag an image here/)
+
+    const file = makeFile('photo.gif', 'image/gif')
+    fireEvent.drop(dropzone, { dataTransfer: { files: [file] } })
+
+    await waitFor(() => expect(writeLinkedImage).toHaveBeenCalledTimes(1))
+    const [path, bytes, ext] = writeLinkedImage.mock.calls[0]
+    expect(path).toBe('/root/a.stl')
+    expect(bytes).toBeInstanceOf(ArrayBuffer)
+    expect(ext).toBe('gif')
+
+    await screen.findByRole('img', { name: 'Reference' })
+  })
+
+  it('dropping a new image onto an already-attached preview replaces it', async () => {
+    readLinkedImage.mockResolvedValue({ bytes: new ArrayBuffer(4), name: 'a.stl.png' })
+    const { container } = render(<ReferenceImage modelPath="/root/a.stl" />)
+    await screen.findByRole('img', { name: 'Reference' })
+
+    writeLinkedImage.mockResolvedValue('a.stl.jpg')
+    const file = makeFile('new.jpg', 'image/jpeg')
+    const root = container.querySelector('.reference-image')
+    expect(root).not.toBeNull()
+    fireEvent.drop(root as Element, { dataTransfer: { files: [file] } })
+
+    await waitFor(() => expect(writeLinkedImage).toHaveBeenCalledTimes(1))
+    const [path, , ext] = writeLinkedImage.mock.calls[0]
+    expect(path).toBe('/root/a.stl')
+    expect(ext).toBe('jpg')
+    await screen.findByRole('img', { name: 'Reference' })
+  })
+
+  it('does not apply an attach() result (drop) after modelPath changes before the write resolves', async () => {
+    readLinkedImage.mockResolvedValue(null)
+    let resolveWrite: (v: string) => void = () => {}
+    writeLinkedImage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveWrite = resolve
+        }),
+    )
+
+    const { rerender } = render(<ReferenceImage modelPath="/root/a.stl" />)
+    await waitFor(() => expect(readLinkedImage).toHaveBeenCalledWith('/root/a.stl'))
+    const dropzone = await screen.findByText(/Drag an image here/)
+
+    const file = makeFile('photo.png', 'image/png')
+    fireEvent.drop(dropzone, { dataTransfer: { files: [file] } })
+
+    await waitFor(() => expect(writeLinkedImage).toHaveBeenCalledTimes(1))
+    expect(writeLinkedImage.mock.calls[0][0]).toBe('/root/a.stl')
+
+    // Switch to model B before A's write resolves.
+    rerender(<ReferenceImage modelPath="/root/b.stl" />)
+    await waitFor(() => expect(readLinkedImage).toHaveBeenCalledWith('/root/b.stl'))
+    expect(await screen.findByText(/Drag an image here/)).toBeInTheDocument()
+
+    // Now resolve A's write -- its result must never apply to B's panel.
+    // Flush inside act() so that if the (buggy) state update happens, React
+    // actually commits it to the DOM before we assert -- otherwise this
+    // assertion would pass vacuously just because React hadn't re-rendered
+    // yet, regardless of whether the race-guard exists.
+    await act(async () => {
+      resolveWrite('a.stl.png')
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByText(/Drag an image here/)).toBeInTheDocument()
+  })
+
+  it('does not apply an attach() result (paste) after modelPath changes before the write resolves', async () => {
+    readLinkedImage.mockResolvedValue(null)
+    let resolveWrite: (v: string) => void = () => {}
+    writeLinkedImage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveWrite = resolve
+        }),
+    )
+
+    const { rerender } = render(<ReferenceImage modelPath="/root/a.stl" />)
+    await waitFor(() => expect(readLinkedImage).toHaveBeenCalledWith('/root/a.stl'))
+    await screen.findByText(/Drag an image here/)
+
+    const file = makeFile('clipboard.png', 'image/png')
+    const clipboardData = {
+      items: [{ type: 'image/png', getAsFile: () => file }],
+    }
+    fireEvent.paste(window, { clipboardData })
+
+    await waitFor(() => expect(writeLinkedImage).toHaveBeenCalledTimes(1))
+    expect(writeLinkedImage.mock.calls[0][0]).toBe('/root/a.stl')
+
+    rerender(<ReferenceImage modelPath="/root/b.stl" />)
+    await waitFor(() => expect(readLinkedImage).toHaveBeenCalledWith('/root/b.stl'))
+    expect(await screen.findByText(/Drag an image here/)).toBeInTheDocument()
+
+    await act(async () => {
+      resolveWrite('a.stl.png')
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByText(/Drag an image here/)).toBeInTheDocument()
   })
 
   it('switching modelPath re-reads and does not show the previous image', async () => {
