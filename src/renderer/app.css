@@ -100,6 +100,13 @@
   border-radius: 6px;
 }
 
+.tile-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
 .tile-name {
   overflow: hidden;
   text-overflow: ellipsis;

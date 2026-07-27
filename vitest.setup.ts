@@ -17,4 +17,29 @@ if (typeof document !== 'undefined') {
   afterEach(() => {
     cleanup()
   })
+
+  // jsdom ships no IntersectionObserver at all. Components that use one
+  // (ModelTile's lazy thumbnail loading) would throw a ReferenceError on
+  // mount in any jsdom test that doesn't specifically care about
+  // intersection behavior (e.g. App.dom.test.tsx, which renders a full
+  // grid of tiles incidentally). Install a harmless no-op stub here as the
+  // default so those tests don't need to know about it; tests that DO care
+  // (ModelTile.dom.test.tsx) install their own richer capturing mock on
+  // `globalThis.IntersectionObserver` in beforeEach, which simply
+  // overrides this default for the duration of that test file.
+  if (typeof globalThis.IntersectionObserver === 'undefined') {
+    class NoopIntersectionObserver implements IntersectionObserver {
+      readonly root: Element | Document | null = null
+      readonly rootMargin: string = ''
+      readonly scrollMargin: string = ''
+      readonly thresholds: ReadonlyArray<number> = []
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return []
+      }
+    }
+    globalThis.IntersectionObserver = NoopIntersectionObserver as unknown as typeof IntersectionObserver
+  }
 }
