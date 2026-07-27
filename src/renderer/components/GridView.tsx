@@ -7,15 +7,14 @@ export default function GridView() {
   const scan = useUiStore((s) => s.scan)
   const search = useUiStore((s) => s.search)
   const activeTags = useUiStore((s) => s.activeTags)
+  const metaByPath = useUiStore((s) => s.metaByPath)
 
   if (!scan) return null
 
-  // Tags aren't wired up yet (metadata comes in Phase 5), so every model is
-  // indexed with an empty tag list for now. Routing through filterModels
-  // here means search/tag filtering (5.2) will "just work" once activeTags
-  // and per-model tags are populated.
+  // Tags come from the store's metaByPath, populated by openFolder's batch
+  // metadata read (Task 5.2b) and kept fresh by InfoPanel's setMeta calls.
   const models = filterModels(
-    scan.files.map((file) => ({ file, tags: [] as string[] })),
+    scan.files.map((file) => ({ file, tags: metaByPath[file.path]?.tags ?? [] })),
     search,
     activeTags,
   )

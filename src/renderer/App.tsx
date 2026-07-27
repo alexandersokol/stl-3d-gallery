@@ -3,6 +3,8 @@ import './app.css'
 import { useUiStore } from './state/store'
 import EmptyState from './components/EmptyState'
 import Breadcrumbs from './components/Breadcrumbs'
+import SearchBox from './components/SearchBox'
+import TagFilterBar from './components/TagFilterBar'
 import GridView from './components/GridView'
 import Viewer from './components/Viewer'
 import ViewerToolbar from './components/ViewerToolbar'
@@ -82,6 +84,12 @@ export default function App() {
             Viewer
           </button>
         </div>
+        {mode === 'grid' && (
+          <div className="grid-filters">
+            <SearchBox />
+            <TagFilterBar />
+          </div>
+        )}
         {mode === 'viewer' && (
           <div className="pane-toggles" role="group" aria-label="Panels">
             <button type="button" aria-pressed={showFilmstrip} onClick={toggleFilmstrip}>

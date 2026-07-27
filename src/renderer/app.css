@@ -53,6 +53,46 @@
   background: #33334a;
 }
 
+.grid-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.search-box {
+  background: #1c1c20;
+  border: 1px solid #3a3a42;
+  border-radius: 6px;
+  color: inherit;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  min-width: 160px;
+}
+
+.tag-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filter-tag-chip {
+  background: #26262c;
+  border: 1px solid #3a3a42;
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.filter-tag-chip-active,
+.filter-tag-chip[aria-pressed='true'] {
+  border-color: #6a6af0;
+  background: #33334a;
+}
+
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;

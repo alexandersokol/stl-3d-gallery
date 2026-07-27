@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import type { ScanResult } from '../shared/types'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import type { Metadata, ScanResult } from '../shared/types'
 
 const scanResult: ScanResult = {
   folders: [{ name: 'sub', path: '/root/sub' }],
@@ -21,6 +21,24 @@ const twoFileScanResult: ScanResult = {
   ],
 }
 
+// Fixtures for the search/tag filtering tests (Task 5.2b): three files
+// whose tags overlap enough to exercise AND semantics (Bunny + Vase both
+// have 'animal'; only Bunny also has 'cute').
+const taggedScanResult: ScanResult = {
+  folders: [],
+  files: [
+    { name: 'Bunny.stl', path: '/root/Bunny.stl', size: 10, mtimeMs: 1 },
+    { name: 'gear.stl', path: '/root/gear.stl', size: 20, mtimeMs: 2 },
+    { name: 'Vase.stl', path: '/root/Vase.stl', size: 30, mtimeMs: 3 },
+  ],
+}
+
+const taggedMeta: Record<string, Metadata> = {
+  '/root/Bunny.stl': { schemaVersion: 1, tags: ['animal', 'cute'], notes: '', updatedAt: 't0' },
+  '/root/gear.stl': { schemaVersion: 1, tags: ['mechanical'], notes: '', updatedAt: 't0' },
+  '/root/Vase.stl': { schemaVersion: 1, tags: ['animal', 'home'], notes: '', updatedAt: 't0' },
+}
+
 const scanFolder = vi.fn().mockResolvedValue(scanResult)
 const openFolderDialog = vi.fn()
 const setLastFolder = vi.fn()
@@ -30,6 +48,8 @@ const readFileBytes = vi.fn()
 // select a file don't hit an undefined api method.
 const readMetadata = vi.fn()
 const writeMetadata = vi.fn()
+// openFolder batch-loads metadata (Task 5.2b) for the whole folder.
+const readMetadataBatch = vi.fn()
 
 vi.mock('./ipc/api', () => ({
   api: {
@@ -39,6 +59,7 @@ vi.mock('./ipc/api', () => ({
     readFileBytes: (...args: unknown[]) => readFileBytes(...args),
     readMetadata: (...args: unknown[]) => readMetadata(...args),
     writeMetadata: (...args: unknown[]) => writeMetadata(...args),
+    readMetadataBatch: (...args: unknown[]) => readMetadataBatch(...args),
   },
 }))
 
@@ -99,6 +120,8 @@ beforeEach(() => {
   readMetadata.mockResolvedValue(null)
   writeMetadata.mockReset()
   writeMetadata.mockResolvedValue({ schemaVersion: 1, tags: [], notes: '', updatedAt: '2024-01-01T00:00:00.000Z' })
+  readMetadataBatch.mockReset()
+  readMetadataBatch.mockResolvedValue({})
   loadModel.mockReset()
   loadModel.mockResolvedValue({
     positions: new Float32Array(9),
@@ -278,5 +301,90 @@ describe('<App/> keyboard shortcuts', () => {
 
     fireEvent.keyDown(colorInput, { key: 'f' })
     expect(useUiStore.getState().showFilmstrip).toBe(true)
+  })
+})
+
+describe('<App/> search + tag filtering (Task 5.2b)', () => {
+  it('batch-loads metadata on openFolder and surfaces its tags in the tag filter bar', async () => {
+    scanFolder.mockResolvedValue(taggedScanResult)
+    readMetadataBatch.mockResolvedValue(taggedMeta)
+
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    expect(readMetadataBatch).toHaveBeenCalledWith([
+      '/root/Bunny.stl',
+      '/root/gear.stl',
+      '/root/Vase.stl',
+    ])
+    expect(useUiStore.getState().metaByPath).toEqual(taggedMeta)
+
+    // One chip per unique tag across the folder, sorted.
+    const chipBar = screen.getByRole('group', { name: /filter by tag/i })
+    const chips = within(chipBar).getAllByRole('button')
+    expect(chips.map((c) => c.textContent)).toEqual(['animal', 'cute', 'home', 'mechanical'])
+  })
+
+  it('search box and tag filter bar only render in grid mode', async () => {
+    scanFolder.mockResolvedValue(taggedScanResult)
+    readMetadataBatch.mockResolvedValue(taggedMeta)
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    expect(screen.getByPlaceholderText('Search by name…')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /filter by tag/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Viewer' }))
+
+    expect(screen.queryByPlaceholderText('Search by name…')).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /filter by tag/i })).not.toBeInTheDocument()
+  })
+
+  it('typing in the search box narrows the grid by filename substring, case-insensitively', async () => {
+    scanFolder.mockResolvedValue(taggedScanResult)
+    readMetadataBatch.mockResolvedValue(taggedMeta)
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    expect(screen.getByText('Bunny.stl')).toBeInTheDocument()
+    expect(screen.getByText('gear.stl')).toBeInTheDocument()
+    expect(screen.getByText('Vase.stl')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText('Search by name…'), { target: { value: 'VAS' } })
+
+    expect(screen.queryByText('Bunny.stl')).not.toBeInTheDocument()
+    expect(screen.queryByText('gear.stl')).not.toBeInTheDocument()
+    expect(screen.getByText('Vase.stl')).toBeInTheDocument()
+  })
+
+  it('tag chips narrow the grid with AND semantics, and deselecting a tag restores it', async () => {
+    scanFolder.mockResolvedValue(taggedScanResult)
+    readMetadataBatch.mockResolvedValue(taggedMeta)
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'animal' }))
+    // Only Bunny and Vase carry 'animal'.
+    expect(screen.getByText('Bunny.stl')).toBeInTheDocument()
+    expect(screen.getByText('Vase.stl')).toBeInTheDocument()
+    expect(screen.queryByText('gear.stl')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'cute' }))
+    // AND semantics: only Bunny has both 'animal' and 'cute'.
+    expect(screen.getByText('Bunny.stl')).toBeInTheDocument()
+    expect(screen.queryByText('Vase.stl')).not.toBeInTheDocument()
+    expect(screen.queryByText('gear.stl')).not.toBeInTheDocument()
+
+    // Deselecting 'cute' falls back to the single-tag ('animal') filter.
+    fireEvent.click(screen.getByRole('button', { name: 'cute' }))
+    expect(screen.getByText('Bunny.stl')).toBeInTheDocument()
+    expect(screen.getByText('Vase.stl')).toBeInTheDocument()
+    expect(screen.queryByText('gear.stl')).not.toBeInTheDocument()
+
+    // Deselecting 'animal' restores the full, unfiltered grid.
+    fireEvent.click(screen.getByRole('button', { name: 'animal' }))
+    expect(screen.getByText('Bunny.stl')).toBeInTheDocument()
+    expect(screen.getByText('gear.stl')).toBeInTheDocument()
+    expect(screen.getByText('Vase.stl')).toBeInTheDocument()
   })
 })

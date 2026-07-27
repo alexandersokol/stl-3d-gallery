@@ -81,6 +81,20 @@ export const useUiStore = create<UiState>((set, get) => ({
   openFolder: async (dir) => {
     const scan = await api.scanFolder(dir)
     set({ cwd: dir, scan, selectedIndex: null, search: '', activeTags: [] })
+
+    // Batch-load metadata (tags/notes) for every file in the folder so the
+    // search/tag filter bar (Task 5.2b) has tags to filter on without the
+    // user having to open each model individually. The folder is already
+    // "open" by this point (cwd/scan committed above), so a failure here
+    // (e.g. disk error) must not prevent browsing -- just proceed with
+    // whatever metadata each file's tile picks up later via InfoPanel.
+    let meta: Record<string, Metadata> = {}
+    try {
+      meta = await api.readMetadataBatch(scan.files.map((f) => f.path))
+    } catch (err) {
+      console.error(`openFolder: failed to batch-read metadata for ${dir}`, err)
+    }
+    set((s) => ({ metaByPath: { ...s.metaByPath, ...meta } }))
   },
 
   select: (index) => set({ selectedIndex: index, mode: 'viewer' }),
