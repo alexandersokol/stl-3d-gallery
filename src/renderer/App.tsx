@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import './app.css'
 import { useUiStore } from './state/store'
+import { useOpenFile } from './hooks/useOpenFile'
 import EmptyState from './components/EmptyState'
 import Breadcrumbs from './components/Breadcrumbs'
 import SearchBox from './components/SearchBox'
@@ -29,6 +30,11 @@ export default function App() {
   const showInfo = useUiStore((s) => s.showInfo)
   const toggleFilmstrip = useUiStore((s) => s.toggleFilmstrip)
   const toggleInfo = useUiStore((s) => s.toggleInfo)
+
+  // Subscribes once to the main process's forwarded 'open-file' path (a
+  // single .stl opened from the OS -- Task 7.1) and opens its parent folder,
+  // selecting the file within it.
+  useOpenFile()
 
   // Global shortcuts. Reads fresh state via getState() inside the handler
   // (rather than depending on `mode` etc.) so the listener is attached once

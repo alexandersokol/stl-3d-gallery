@@ -34,3 +34,23 @@ export function splitPath(p: string): PathSegment[] {
   }
   return segments
 }
+
+/**
+ * Returns the parent directory of an absolute OS path. Handles both POSIX
+ * paths ("/root/a.stl" -> "/root") and Windows drive-letter paths
+ * ("C:\\models\\a.stl" -> "C:\\models"), since the renderer has no access to
+ * Node's `path` module and needs this to resolve the folder to open when the
+ * OS hands us a single file (Task 7.1's "open with" flow).
+ */
+export function dirname(p: string): string {
+  if (WINDOWS_ROOT.test(p)) {
+    const root = p.slice(0, 3) // e.g. "C:\\"
+    const rest = p.slice(3).split('\\').filter(Boolean)
+    if (rest.length <= 1) return root
+    return `${root}${rest.slice(0, -1).join('\\')}`
+  }
+
+  const parts = p.split('/').filter(Boolean)
+  if (parts.length <= 1) return '/'
+  return `/${parts.slice(0, -1).join('/')}`
+}

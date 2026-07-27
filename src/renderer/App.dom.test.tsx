@@ -57,6 +57,13 @@ const readMetadataBatch = vi.fn()
 const readLinkedImage = vi.fn()
 const writeLinkedImage = vi.fn()
 const removeLinkedImage = vi.fn()
+// onOpenFile (Task 7.1) has no unsubscribe -- it just registers a callback.
+// Capture it here so tests can invoke it directly to simulate the main
+// process forwarding an 'open-file' path.
+let openFileCallback: ((path: string) => void) | null = null
+const onOpenFile = vi.fn((cb: (path: string) => void) => {
+  openFileCallback = cb
+})
 
 vi.mock('./ipc/api', () => ({
   api: {
@@ -70,6 +77,7 @@ vi.mock('./ipc/api', () => ({
     readLinkedImage: (...args: unknown[]) => readLinkedImage(...args),
     writeLinkedImage: (...args: unknown[]) => writeLinkedImage(...args),
     removeLinkedImage: (...args: unknown[]) => removeLinkedImage(...args),
+    onOpenFile: (...args: [(path: string) => void]) => onOpenFile(...args),
   },
 }))
 
@@ -136,6 +144,8 @@ beforeEach(() => {
   readLinkedImage.mockResolvedValue(null)
   writeLinkedImage.mockReset()
   removeLinkedImage.mockReset()
+  onOpenFile.mockClear()
+  openFileCallback = null
   loadModel.mockReset()
   loadModel.mockResolvedValue({
     positions: new Float32Array(9),
@@ -400,5 +410,44 @@ describe('<App/> search + tag filtering (Task 5.2b)', () => {
     expect(screen.getByText('Bunny.stl')).toBeInTheDocument()
     expect(screen.getByText('gear.stl')).toBeInTheDocument()
     expect(screen.getByText('Vase.stl')).toBeInTheDocument()
+  })
+})
+
+describe('<App/> single-file open (Task 7.1)', () => {
+  it('subscribes to onOpenFile exactly once per mount', () => {
+    render(<App />)
+    expect(onOpenFile).toHaveBeenCalledTimes(1)
+  })
+
+  it('opening a single file opens its parent folder and selects it in the viewer', async () => {
+    scanFolder.mockResolvedValue(twoFileScanResult)
+    render(<App />)
+    expect(openFileCallback).not.toBeNull()
+
+    openFileCallback!('/root/b.stl')
+
+    await waitFor(() => expect(scanFolder).toHaveBeenCalledWith('/root'))
+    await waitFor(() => {
+      const state = useUiStore.getState()
+      expect(state.mode).toBe('viewer')
+      expect(state.selectedIndex).toBe(1)
+    })
+
+    // Let Viewer's async model-load effect settle before the test ends.
+    await waitFor(() => expect(readFileBytes).toHaveBeenCalled())
+  })
+
+  it('opening a file not present in its own folder scan leaves the app in grid mode', async () => {
+    scanFolder.mockResolvedValue(scanResult) // only contains /root/a.stl
+    render(<App />)
+    expect(openFileCallback).not.toBeNull()
+
+    openFileCallback!('/root/missing.stl')
+
+    await waitFor(() => expect(scanFolder).toHaveBeenCalledWith('/root'))
+    // Give any (absent) selection microtask a turn, then assert we stayed put.
+    await waitFor(() => expect(useUiStore.getState().cwd).toBe('/root'))
+    expect(useUiStore.getState().mode).toBe('grid')
+    expect(useUiStore.getState().selectedIndex).toBeNull()
   })
 })
