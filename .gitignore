@@ -12,6 +12,10 @@ build/
 # Test / coverage
 coverage/
 
+# TypeScript project references build cache
+.tsbuildcache/
+*.tsbuildinfo
+
 # Visual-brainstorm scratch (superpowers companion)
 .superpowers/
 
