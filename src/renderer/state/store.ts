@@ -56,8 +56,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
 
   prev: () => {
-    const { selectedIndex } = get()
-    if (selectedIndex === null) return
+    const { selectedIndex, scan } = get()
+    if (selectedIndex === null || scan === null) return
     if (selectedIndex <= 0) return
     set({ selectedIndex: selectedIndex - 1 })
   },

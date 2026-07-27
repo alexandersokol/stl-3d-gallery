@@ -49,6 +49,12 @@ describe('useUiStore', () => {
     expect(s.mode).toBe('grid')
   })
 
+  it('openFolder keeps mode', async () => {
+    useUiStore.setState({ mode: 'viewer' })
+    await useUiStore.getState().openFolder('/x')
+    expect(useUiStore.getState().mode).toBe('viewer')
+  })
+
   it('select sets selectedIndex and switches mode to viewer', async () => {
     await useUiStore.getState().openFolder('/x')
     useUiStore.getState().select(1)
@@ -79,6 +85,14 @@ describe('useUiStore', () => {
     expect(useUiStore.getState().selectedIndex).toBeNull()
     useUiStore.getState().prev()
     expect(useUiStore.getState().selectedIndex).toBeNull()
+  })
+
+  it('next/prev are no-ops when selectedIndex is set but scan is null', () => {
+    useUiStore.setState({ selectedIndex: 1, scan: null })
+    useUiStore.getState().next()
+    expect(useUiStore.getState().selectedIndex).toBe(1)
+    useUiStore.getState().prev()
+    expect(useUiStore.getState().selectedIndex).toBe(1)
   })
 
   it('toggleTag adds then removes a tag', () => {
