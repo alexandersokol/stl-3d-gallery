@@ -1,7 +1,7 @@
 import { ipcMain, dialog } from 'electron'
 import { promises as fs } from 'fs'
-import { scanFolder } from './fs-scanner'
-import { readMetadata, writeMetadata } from './metadata-store'
+import { scanFolder, scanTree } from './fs-scanner'
+import { readMetadata, writeMetadata, readMetadataBatch } from './metadata-store'
 import { readThumbnail, writeThumbnail } from './thumbnail-cache'
 import { readLinkedImage, writeLinkedImage, removeLinkedImage } from './linked-image-store'
 import { appState } from './app-state'
@@ -27,6 +27,10 @@ export function registerIpc(): void {
     return scanFolder(dir)
   })
 
+  ipcMain.handle('scanTree', async (_e, dir: string) => {
+    return scanTree(dir)
+  })
+
   ipcMain.handle('readFileBytes', async (_e, p: string) => {
     const buf = await fs.readFile(p)
     return toArrayBuffer(buf)
@@ -34,6 +38,10 @@ export function registerIpc(): void {
 
   ipcMain.handle('readMetadata', async (_e, model: string) => {
     return readMetadata(model)
+  })
+
+  ipcMain.handle('readMetadataBatch', async (_e, paths: string[]) => {
+    return readMetadataBatch(paths)
   })
 
   ipcMain.handle('writeMetadata', async (_e, model: string, data: Partial<Metadata>) => {

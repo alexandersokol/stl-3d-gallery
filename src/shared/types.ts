@@ -7,8 +7,10 @@ export interface ModelStats { triCount: number; vertCount: number; bbox: { x: nu
 export interface Api {
   openFolderDialog(): Promise<string | null>
   scanFolder(dir: string): Promise<ScanResult>
+  scanTree(dir: string): Promise<FileEntry[]>
   readFileBytes(p: string): Promise<ArrayBuffer>
   readMetadata(model: string): Promise<Metadata | null>
+  readMetadataBatch(paths: string[]): Promise<Record<string, Metadata>>
   writeMetadata(model: string, data: Partial<Metadata>): Promise<Metadata>
   readThumbnail(model: string): Promise<ArrayBuffer | null>
   writeThumbnail(model: string, png: ArrayBuffer): Promise<void>

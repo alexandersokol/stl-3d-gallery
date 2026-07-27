@@ -7,6 +7,17 @@ export async function readMetadata(modelPath: string): Promise<Metadata | null> 
   try { return JSON.parse(await fs.readFile(metaPath(modelPath), 'utf8')) as Metadata }
   catch (e: any) { if (e.code === 'ENOENT') return null; throw e }
 }
+export async function readMetadataBatch(modelPaths: string[]): Promise<Record<string, Metadata>> {
+  const entries = await Promise.all(
+    modelPaths.map(async (p) => [p, await readMetadata(p)] as const)
+  )
+  const result: Record<string, Metadata> = {}
+  for (const [p, meta] of entries) {
+    if (meta) result[p] = meta
+  }
+  return result
+}
+
 export async function writeMetadata(modelPath: string, data: Partial<Metadata>): Promise<Metadata> {
   const cur = (await readMetadata(modelPath)) ?? DEFAULT
   const next: Metadata = { ...cur, ...data, schemaVersion: 1, updatedAt: new Date().toISOString() }

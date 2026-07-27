@@ -8,8 +8,10 @@ import type { Api } from '../shared/types'
 const api: Api = {
   openFolderDialog: () => ipcRenderer.invoke('openFolderDialog'),
   scanFolder: (dir) => ipcRenderer.invoke('scanFolder', dir),
+  scanTree: (dir) => ipcRenderer.invoke('scanTree', dir),
   readFileBytes: (p) => ipcRenderer.invoke('readFileBytes', p),
   readMetadata: (model) => ipcRenderer.invoke('readMetadata', model),
+  readMetadataBatch: (paths) => ipcRenderer.invoke('readMetadataBatch', paths),
   writeMetadata: (model, data) => ipcRenderer.invoke('writeMetadata', model, data),
   readThumbnail: (model) => ipcRenderer.invoke('readThumbnail', model),
   writeThumbnail: (model, png) => ipcRenderer.invoke('writeThumbnail', model, png),
