@@ -21,6 +21,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
+  "include": ["vitest.setup.ts", "src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
