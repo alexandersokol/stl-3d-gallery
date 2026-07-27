@@ -19,5 +19,9 @@ export default defineConfig({
     // No test files exist yet this early in the build-out (Phase 0); don't
     // fail the run just because of that. Later tasks add real test files.
     passWithNoTests: true,
+    // Runs for every test file regardless of environment. It no-ops when
+    // there's no `document` (node-environment tests), and registers
+    // jest-dom matchers + RTL auto-cleanup when there is (jsdom tests).
+    setupFiles: ['./vitest.setup.ts'],
   },
 })

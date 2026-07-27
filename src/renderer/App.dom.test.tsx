@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import type { ScanResult } from '../shared/types'
 
 const scanResult: ScanResult = {
   folders: [{ name: 'sub', path: '/root/sub' }],
   files: [{ name: 'a.stl', path: '/root/a.stl', size: 10, mtimeMs: 1 }],
+}
+
+const deepScanResult: ScanResult = {
+  folders: [],
+  files: [{ name: 'b.stl', path: '/root/sub/leaf/b.stl', size: 20, mtimeMs: 2 }],
 }
 
 const scanFolder = vi.fn().mockResolvedValue(scanResult)
@@ -31,14 +36,10 @@ beforeEach(() => {
   useUiStore.setState(useUiStore.getInitialState())
 })
 
-afterEach(() => {
-  cleanup()
-})
-
 describe('<App/>', () => {
   it('shows the empty state with an Open folder button when no folder is open', () => {
     render(<App />)
-    expect(screen.getByRole('button', { name: /open folder/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /open folder/i })).toBeInTheDocument()
   })
 
   it('opens a folder via the dialog, scans it, records it as last folder, and renders tiles', async () => {
@@ -96,11 +97,28 @@ describe('<App/>', () => {
     await useUiStore.getState().openFolder('/root')
     render(<App />)
 
-    expect(screen.getByRole('navigation', { name: /breadcrumb/i })).toBeTruthy()
+    expect(screen.getByRole('navigation', { name: /breadcrumb/i })).toBeInTheDocument()
     const rootSegment = screen.getByRole('button', { name: 'root' })
-    expect(rootSegment).toBeTruthy()
+    expect(rootSegment).toBeInTheDocument()
 
     fireEvent.click(rootSegment)
     expect(scanFolder).toHaveBeenLastCalledWith('/root')
+  })
+
+  it('clicking an ancestor breadcrumb segment (not the current folder) navigates to that ancestor', async () => {
+    // Seed a deeper cwd so there are intermediate ancestor segments between
+    // the drive root and the current folder to click on.
+    scanFolder.mockResolvedValue(deepScanResult)
+    await useUiStore.getState().openFolder('/root/sub/leaf')
+    render(<App />)
+
+    const subSegment = screen.getByRole('button', { name: 'sub' })
+    expect(subSegment).toBeInTheDocument()
+
+    fireEvent.click(subSegment)
+
+    // Must be called with the clicked ancestor's cumulative path, not the
+    // original (deeper) cwd or some other segment's path.
+    expect(scanFolder).toHaveBeenLastCalledWith('/root/sub')
   })
 })
