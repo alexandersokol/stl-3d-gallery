@@ -180,13 +180,20 @@ export default function ReferenceImage({ modelPath }: ReferenceImageProps) {
   }
 
   const handleDetach = async () => {
+    // Capture the model this detach was started for. If the user switches to a
+    // different model before removeLinkedImage resolves, this detach's UI side
+    // effects must not run (see attach() for the same pattern).
+    const capturedPath = modelPath
+    const isStale = () => currentPathRef.current !== capturedPath
     try {
-      await api.removeLinkedImage(modelPath)
+      await api.removeLinkedImage(capturedPath)
+      if (isStale()) return
       clearPreview()
       setError(null)
-      syncLinkedImageInStore(modelPath, undefined)
+      syncLinkedImageInStore(capturedPath, undefined)
     } catch (err) {
-      console.error(`ReferenceImage: failed to remove linked image for ${modelPath}`, err)
+      if (isStale()) return
+      console.error(`ReferenceImage: failed to remove linked image for ${capturedPath}`, err)
       setError('Failed to remove reference image')
     }
   }

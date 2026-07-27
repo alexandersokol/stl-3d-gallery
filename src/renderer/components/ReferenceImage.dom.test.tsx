@@ -136,6 +136,39 @@ describe('<ReferenceImage/>', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 
+  it('does not apply a detach() result after modelPath changes before removeLinkedImage resolves', async () => {
+    readLinkedImage.mockResolvedValue({ bytes: new ArrayBuffer(4), name: 'a.stl.png' })
+    let resolveRemove: (v: undefined) => void = () => {}
+    removeLinkedImage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRemove = resolve
+        }),
+    )
+
+    const { rerender } = render(<ReferenceImage modelPath="/root/a.stl" />)
+    await screen.findByRole('img', { name: 'Reference' })
+
+    // Click Detach, but the removal is now pending.
+    fireEvent.click(screen.getByRole('button', { name: 'Detach' }))
+    await waitFor(() => expect(removeLinkedImage).toHaveBeenCalledWith('/root/a.stl'))
+
+    // Switch to model B before A's removal resolves. B also has a preview.
+    readLinkedImage.mockResolvedValueOnce({ bytes: new ArrayBuffer(4), name: 'b.stl.png' })
+    rerender(<ReferenceImage modelPath="/root/b.stl" />)
+    await waitFor(() => expect(readLinkedImage).toHaveBeenCalledWith('/root/b.stl'))
+    await screen.findByRole('img', { name: 'Reference' })
+
+    // Now resolve A's removal. Its clearPreview() must not run, so B's preview
+    // stays intact.
+    await act(async () => {
+      resolveRemove(undefined)
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(screen.queryByRole('img', { name: 'Reference' })).toBeInTheDocument()
+  })
+
   it('drop writes webp with the correct ext', async () => {
     render(<ReferenceImage modelPath="/root/a.stl" />)
     await waitFor(() => expect(readLinkedImage).toHaveBeenCalled())
