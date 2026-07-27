@@ -11,6 +11,7 @@ import type { Metadata } from '../../shared/types'
 import { useUiStore } from '../state/store'
 import { api } from '../ipc/api'
 import TagEditor from './TagEditor'
+import ReferenceImage from './ReferenceImage'
 
 const SAVE_DEBOUNCE_MS = 500
 
@@ -195,7 +196,7 @@ export default function InfoPanel() {
 
           <section className="info-section">
             <h3>Reference Image</h3>
-            <p className="info-panel-placeholder">Coming soon</p>
+            <ReferenceImage modelPath={file.path} />
           </section>
         </>
       )}

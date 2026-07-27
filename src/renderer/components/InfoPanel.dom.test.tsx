@@ -12,10 +12,20 @@ const stats: ModelStats = { triCount: 1234, vertCount: 618, bbox: { x: 10, y: 20
 
 const readMetadata = vi.fn()
 const writeMetadata = vi.fn()
+// ReferenceImage (rendered inside InfoPanel) reads the linked image for the
+// selected file on mount. Not under test here (see
+// ReferenceImage.dom.test.tsx) -- just stubbed so InfoPanel's own tests
+// don't hit an undefined api method.
+const readLinkedImage = vi.fn()
+const writeLinkedImage = vi.fn()
+const removeLinkedImage = vi.fn()
 vi.mock('../ipc/api', () => ({
   api: {
     readMetadata: (...args: unknown[]) => readMetadata(...args),
     writeMetadata: (...args: unknown[]) => writeMetadata(...args),
+    readLinkedImage: (...args: unknown[]) => readLinkedImage(...args),
+    writeLinkedImage: (...args: unknown[]) => writeLinkedImage(...args),
+    removeLinkedImage: (...args: unknown[]) => removeLinkedImage(...args),
   },
 }))
 
@@ -30,6 +40,10 @@ beforeEach(() => {
   readMetadata.mockResolvedValue(null)
   writeMetadata.mockReset()
   writeMetadata.mockResolvedValue(emptyMeta())
+  readLinkedImage.mockReset()
+  readLinkedImage.mockResolvedValue(null)
+  writeLinkedImage.mockReset()
+  removeLinkedImage.mockReset()
 })
 
 afterEach(() => {

@@ -50,6 +50,13 @@ const readMetadata = vi.fn()
 const writeMetadata = vi.fn()
 // openFolder batch-loads metadata (Task 5.2b) for the whole folder.
 const readMetadataBatch = vi.fn()
+// ReferenceImage (rendered inside InfoPanel) reads the linked image for the
+// selected file. Not under test here (see ReferenceImage.dom.test.tsx) --
+// just stubbed so App-level tests that select a file don't hit an undefined
+// api method.
+const readLinkedImage = vi.fn()
+const writeLinkedImage = vi.fn()
+const removeLinkedImage = vi.fn()
 
 vi.mock('./ipc/api', () => ({
   api: {
@@ -60,6 +67,9 @@ vi.mock('./ipc/api', () => ({
     readMetadata: (...args: unknown[]) => readMetadata(...args),
     writeMetadata: (...args: unknown[]) => writeMetadata(...args),
     readMetadataBatch: (...args: unknown[]) => readMetadataBatch(...args),
+    readLinkedImage: (...args: unknown[]) => readLinkedImage(...args),
+    writeLinkedImage: (...args: unknown[]) => writeLinkedImage(...args),
+    removeLinkedImage: (...args: unknown[]) => removeLinkedImage(...args),
   },
 }))
 
@@ -122,6 +132,10 @@ beforeEach(() => {
   writeMetadata.mockResolvedValue({ schemaVersion: 1, tags: [], notes: '', updatedAt: '2024-01-01T00:00:00.000Z' })
   readMetadataBatch.mockReset()
   readMetadataBatch.mockResolvedValue({})
+  readLinkedImage.mockReset()
+  readLinkedImage.mockResolvedValue(null)
+  writeLinkedImage.mockReset()
+  removeLinkedImage.mockReset()
   loadModel.mockReset()
   loadModel.mockResolvedValue({
     positions: new Float32Array(9),
