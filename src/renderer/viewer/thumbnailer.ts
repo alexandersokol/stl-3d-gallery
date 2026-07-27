@@ -46,7 +46,7 @@ function getState(): RendererState {
 
   const canvas = createCanvas(DEFAULT_SIZE)
   const renderer = new THREE.WebGLRenderer({
-    canvas: canvas as unknown as HTMLCanvasElement,
+    canvas,
     antialias: true,
     alpha: true,
   })
@@ -90,8 +90,18 @@ function toBlob(canvas: RenderTarget): Promise<Blob> {
  * Renders raw triangle-soup vertex positions (as produced by loadModel) to a
  * square, transparent-background PNG thumbnail on a shared offscreen
  * WebGL context.
+ *
+ * The actual render body (doRenderThumbnail) mutates module-level shared
+ * state (scene/camera/canvas) and awaits an async toBlob() call partway
+ * through. If two renders were allowed to run concurrently, the second call
+ * would mutate that shared state during the first call's async gap,
+ * producing corrupted thumbnails (composited meshes, wrong camera). To
+ * prevent that, every call to renderThumbnail is chained onto a
+ * module-level FIFO queue so renders are strictly serialized — each call
+ * waits for the previous one to fully settle (including its async toBlob)
+ * before starting.
  */
-export async function renderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): Promise<Blob> {
+async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): Promise<Blob> {
   const { renderer, canvas, scene, camera } = getState()
 
   renderer.setSize(size, size, false)
@@ -100,7 +110,6 @@ export async function renderThumbnail(positions: Float32Array, size = DEFAULT_SI
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
   geometry.computeVertexNormals()
-  geometry.computeBoundingBox()
   geometry.computeBoundingSphere()
 
   const material = new THREE.MeshStandardMaterial({
@@ -138,4 +147,20 @@ export async function renderThumbnail(positions: Float32Array, size = DEFAULT_SI
     geometry.dispose()
     material.dispose()
   }
+}
+
+// Module-level FIFO queue serializing all renderThumbnail() calls. See the
+// doc comment above for why this is necessary.
+let renderQueue: Promise<unknown> = Promise.resolve()
+
+export function renderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): Promise<Blob> {
+  const result = renderQueue.then(() => doRenderThumbnail(positions, size))
+  // Keep the chain alive even if a render rejects, so one failure doesn't
+  // wedge the queue for subsequent calls. The returned `result` promise
+  // still rejects to the caller.
+  renderQueue = result.then(
+    () => undefined,
+    () => undefined,
+  )
+  return result
 }
