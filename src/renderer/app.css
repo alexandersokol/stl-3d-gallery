@@ -230,11 +230,15 @@
 }
 
 .info-panel {
-  width: 220px;
+  width: 240px;
   flex-shrink: 0;
   padding: 0.75rem;
   border-left: 1px solid #333;
   font-size: 0.85rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .info-panel-filename {
@@ -242,6 +246,118 @@
   overflow-wrap: break-word;
 }
 
+.info-panel-path {
+  overflow-wrap: break-word;
+  opacity: 0.6;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+
 .info-panel-placeholder {
   opacity: 0.6;
+}
+
+.info-section h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.7;
+}
+
+.info-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.6rem;
+  margin: 0;
+}
+
+.info-stats dt {
+  opacity: 0.6;
+}
+
+.info-stats dd {
+  margin: 0;
+  text-align: right;
+}
+
+.tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tag-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+}
+
+.tag-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #26262c;
+  border: 1px solid #3a3a42;
+  border-radius: 999px;
+  padding: 0.15rem 0.3rem 0.15rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+}
+
+.tag-chip-remove:hover {
+  opacity: 1;
+}
+
+.tag-input-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tag-input {
+  flex: 1;
+  min-width: 0;
+  background: #1c1c20;
+  border: 1px solid #3a3a42;
+  border-radius: 6px;
+  color: inherit;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.8rem;
+}
+
+.tag-add-button {
+  background: #26262c;
+  border: 1px solid #3a3a42;
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.info-notes {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  background: #1c1c20;
+  border: 1px solid #3a3a42;
+  border-radius: 6px;
+  color: inherit;
+  padding: 0.45rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  box-sizing: border-box;
 }

@@ -25,6 +25,11 @@ const scanFolder = vi.fn().mockResolvedValue(scanResult)
 const openFolderDialog = vi.fn()
 const setLastFolder = vi.fn()
 const readFileBytes = vi.fn()
+// InfoPanel reads/writes metadata for the selected file. Not under test
+// here (see InfoPanel.dom.test.tsx) -- just stubbed so App-level tests that
+// select a file don't hit an undefined api method.
+const readMetadata = vi.fn()
+const writeMetadata = vi.fn()
 
 vi.mock('./ipc/api', () => ({
   api: {
@@ -32,6 +37,8 @@ vi.mock('./ipc/api', () => ({
     openFolderDialog: (...args: unknown[]) => openFolderDialog(...args),
     setLastFolder: (...args: unknown[]) => setLastFolder(...args),
     readFileBytes: (...args: unknown[]) => readFileBytes(...args),
+    readMetadata: (...args: unknown[]) => readMetadata(...args),
+    writeMetadata: (...args: unknown[]) => writeMetadata(...args),
   },
 }))
 
@@ -88,6 +95,10 @@ beforeEach(() => {
   setLastFolder.mockClear()
   readFileBytes.mockReset()
   readFileBytes.mockResolvedValue(new ArrayBuffer(8))
+  readMetadata.mockReset()
+  readMetadata.mockResolvedValue(null)
+  writeMetadata.mockReset()
+  writeMetadata.mockResolvedValue({ schemaVersion: 1, tags: [], notes: '', updatedAt: '2024-01-01T00:00:00.000Z' })
   loadModel.mockReset()
   loadModel.mockResolvedValue({
     positions: new Float32Array(9),

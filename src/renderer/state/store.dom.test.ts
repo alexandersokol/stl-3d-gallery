@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { FileEntry, ModelStats, ScanResult } from '../../shared/types'
+import type { FileEntry, Metadata, ModelStats, ScanResult } from '../../shared/types'
 
 const files: FileEntry[] = [
   { path: '/x/a.stl', name: 'a.stl', size: 1, mtimeMs: 1 },
@@ -40,6 +40,7 @@ describe('useUiStore', () => {
     expect(s.showGrid).toBe(false)
     expect(s.autoRotate).toBe(false)
     expect(s.currentStats).toBeNull()
+    expect(s.metaByPath).toEqual({})
     expect(s.resetCameraSignal).toBe(0)
   })
 
@@ -176,5 +177,20 @@ describe('useUiStore', () => {
 
     useUiStore.getState().setCurrentStats(null)
     expect(useUiStore.getState().currentStats).toBeNull()
+  })
+
+  it('setMeta stores metadata keyed by path, without clobbering other paths', () => {
+    const metaA: Metadata = { schemaVersion: 1, tags: ['a'], notes: 'first', updatedAt: '2024-01-01T00:00:00.000Z' }
+    const metaB: Metadata = { schemaVersion: 1, tags: ['b'], notes: 'second', updatedAt: '2024-01-02T00:00:00.000Z' }
+
+    useUiStore.getState().setMeta('/x/a.stl', metaA)
+    expect(useUiStore.getState().metaByPath).toEqual({ '/x/a.stl': metaA })
+
+    useUiStore.getState().setMeta('/x/b.stl', metaB)
+    expect(useUiStore.getState().metaByPath).toEqual({ '/x/a.stl': metaA, '/x/b.stl': metaB })
+
+    const metaAUpdated: Metadata = { ...metaA, notes: 'updated' }
+    useUiStore.getState().setMeta('/x/a.stl', metaAUpdated)
+    expect(useUiStore.getState().metaByPath).toEqual({ '/x/a.stl': metaAUpdated, '/x/b.stl': metaB })
   })
 })

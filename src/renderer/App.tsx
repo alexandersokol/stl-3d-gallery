@@ -7,6 +7,7 @@ import GridView from './components/GridView'
 import Viewer from './components/Viewer'
 import ViewerToolbar from './components/ViewerToolbar'
 import Filmstrip from './components/Filmstrip'
+import InfoPanel from './components/InfoPanel'
 
 // True when the keyboard event originated in something the user is typing
 // into (a text field, the color/range toolbar inputs, or a contentEditable
@@ -16,21 +17,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
   if (target.isContentEditable) return true
   const tag = target.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
-}
-
-// Minimal stand-in for the real InfoPanel (Phase 5). Just enough to occupy
-// the info-pane slot in the viewer layout.
-function InfoPlaceholder() {
-  const scan = useUiStore((s) => s.scan)
-  const selectedIndex = useUiStore((s) => s.selectedIndex)
-  const file = scan !== null && selectedIndex !== null ? (scan.files[selectedIndex] ?? null) : null
-
-  return (
-    <aside className="info-panel" aria-label="Model info">
-      <p className="info-panel-filename">{file?.name ?? ''}</p>
-      <p className="info-panel-placeholder">Details coming soon</p>
-    </aside>
-  )
 }
 
 export default function App() {
@@ -117,7 +103,7 @@ export default function App() {
             <ViewerToolbar />
             <Viewer />
           </div>
-          {showInfo && <InfoPlaceholder />}
+          {showInfo && <InfoPanel />}
         </div>
       )}
     </div>

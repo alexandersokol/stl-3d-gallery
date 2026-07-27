@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ModelStats, ScanResult } from '../../shared/types'
+import type { Metadata, ModelStats, ScanResult } from '../../shared/types'
 import { api } from '../ipc/api'
 import type { MaterialPreset } from '../viewer/materials'
 import type { LightPreset } from '../viewer/lighting'
@@ -24,6 +24,11 @@ export interface UiState {
   showGrid: boolean
   autoRotate: boolean
   currentStats: ModelStats | null
+  // Per-file metadata (tags/notes/etc) keyed by absolute path. Populated by
+  // InfoPanel whenever it reads or writes a file's metadata, so the filter
+  // bar (Task 5.2) can read tags for the whole folder without re-reading
+  // every metadata.json off disk itself.
+  metaByPath: Record<string, Metadata>
   // Bumped (never read directly for its value) whenever the toolbar's
   // "Reset camera" button is clicked. Viewer watches this via an effect and
   // calls SceneManager.resetCamera() -- a plain store action can't reach
@@ -48,6 +53,7 @@ export interface UiState {
   toggleGrid(): void
   toggleAutoRotate(): void
   setCurrentStats(stats: ModelStats | null): void
+  setMeta(path: string, meta: Metadata): void
   requestResetCamera(): void
 }
 
@@ -69,6 +75,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   showGrid: false,
   autoRotate: false,
   currentStats: null,
+  metaByPath: {},
   resetCameraSignal: 0,
 
   openFolder: async (dir) => {
@@ -110,5 +117,6 @@ export const useUiStore = create<UiState>((set, get) => ({
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
   toggleAutoRotate: () => set((s) => ({ autoRotate: !s.autoRotate })),
   setCurrentStats: (stats) => set({ currentStats: stats }),
+  setMeta: (path, meta) => set((s) => ({ metaByPath: { ...s.metaByPath, [path]: meta } })),
   requestResetCamera: () => set((s) => ({ resetCameraSignal: s.resetCameraSignal + 1 })),
 }))
