@@ -24,6 +24,12 @@ export interface UiState {
   showGrid: boolean
   autoRotate: boolean
   currentStats: ModelStats | null
+  // Bumped (never read directly for its value) whenever the toolbar's
+  // "Reset camera" button is clicked. Viewer watches this via an effect and
+  // calls SceneManager.resetCamera() -- a plain store action can't reach
+  // into the imperative three.js engine directly, so this is the signal
+  // that bridges the two.
+  resetCameraSignal: number
   openFolder(dir: string): Promise<void>
   select(index: number): void
   next(): void
@@ -42,6 +48,7 @@ export interface UiState {
   toggleGrid(): void
   toggleAutoRotate(): void
   setCurrentStats(stats: ModelStats | null): void
+  requestResetCamera(): void
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -62,6 +69,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   showGrid: false,
   autoRotate: false,
   currentStats: null,
+  resetCameraSignal: 0,
 
   openFolder: async (dir) => {
     const scan = await api.scanFolder(dir)
@@ -102,4 +110,5 @@ export const useUiStore = create<UiState>((set, get) => ({
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
   toggleAutoRotate: () => set((s) => ({ autoRotate: !s.autoRotate })),
   setCurrentStats: (stats) => set({ currentStats: stats }),
+  requestResetCamera: () => set((s) => ({ resetCameraSignal: s.resetCameraSignal + 1 })),
 }))

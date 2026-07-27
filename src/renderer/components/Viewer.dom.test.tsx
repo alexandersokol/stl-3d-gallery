@@ -129,6 +129,24 @@ describe('<Viewer/>', () => {
     await waitFor(() => expect(sm.setLighting).toHaveBeenCalledWith('studio', 2))
   })
 
+  it('calls resetCamera when resetCameraSignal increments, but not on mount', async () => {
+    render(<Viewer />)
+    const sm = MockSceneManager.instances[0]
+    await waitFor(() => expect(sm.setModel).toHaveBeenCalled())
+
+    expect(sm.resetCamera).not.toHaveBeenCalled()
+
+    act(() => {
+      useUiStore.getState().requestResetCamera()
+    })
+    await waitFor(() => expect(sm.resetCamera).toHaveBeenCalledTimes(1))
+
+    act(() => {
+      useUiStore.getState().requestResetCamera()
+    })
+    await waitFor(() => expect(sm.resetCamera).toHaveBeenCalledTimes(2))
+  })
+
   it('disposes the SceneManager and disconnects the ResizeObserver on unmount', async () => {
     const { unmount } = render(<Viewer />)
     const sm = MockSceneManager.instances[0]

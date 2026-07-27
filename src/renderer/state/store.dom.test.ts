@@ -40,6 +40,7 @@ describe('useUiStore', () => {
     expect(s.showGrid).toBe(false)
     expect(s.autoRotate).toBe(false)
     expect(s.currentStats).toBeNull()
+    expect(s.resetCameraSignal).toBe(0)
   })
 
   it('openFolder scans, sets cwd/scan, and resets selection/search/tags', async () => {
@@ -156,6 +157,16 @@ describe('useUiStore', () => {
     expect(useUiStore.getState().autoRotate).toBe(true)
     useUiStore.getState().toggleAutoRotate()
     expect(useUiStore.getState().autoRotate).toBe(false)
+  })
+
+  it('requestResetCamera increments resetCameraSignal each call', () => {
+    expect(useUiStore.getState().resetCameraSignal).toBe(0)
+
+    useUiStore.getState().requestResetCamera()
+    expect(useUiStore.getState().resetCameraSignal).toBe(1)
+
+    useUiStore.getState().requestResetCamera()
+    expect(useUiStore.getState().resetCameraSignal).toBe(2)
   })
 
   it('setCurrentStats stores the model stats for the InfoPanel to read later', () => {

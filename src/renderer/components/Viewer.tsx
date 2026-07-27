@@ -30,7 +30,14 @@ export default function Viewer() {
   const showGrid = useUiStore((s) => s.showGrid)
   const autoRotate = useUiStore((s) => s.autoRotate)
   const setCurrentStats = useUiStore((s) => s.setCurrentStats)
+  const resetCameraSignal = useUiStore((s) => s.resetCameraSignal)
 
+  // TODO(phase5): when scan/selectedIndex become null (e.g. navigating back
+  // to an empty folder while still in viewer mode), `file` below goes null
+  // and the load-effect just returns early -- the last-loaded mesh and
+  // `currentStats` are left in place rather than cleared. Revisit once
+  // Phase 5's InfoPanel depends on `currentStats` always reflecting the
+  // current selection.
   const file = scan !== null && selectedIndex !== null ? (scan.files[selectedIndex] ?? null) : null
 
   // Create the engine once per mount, tear it down on unmount. This effect
@@ -69,6 +76,20 @@ export default function Viewer() {
   useEffect(() => {
     sceneRef.current?.setAutoRotate(autoRotate)
   }, [autoRotate])
+
+  // `resetCameraSignal` starts at 0 and only ever increments, via the
+  // toolbar's "Reset camera" button calling requestResetCamera(). The ref
+  // below skips the effect's initial run (mount) so mounting Viewer never
+  // itself triggers a spurious resetCamera() call -- only a real increment
+  // after mount does.
+  const skipInitialResetRef = useRef(true)
+  useEffect(() => {
+    if (skipInitialResetRef.current) {
+      skipInitialResetRef.current = false
+      return
+    }
+    sceneRef.current?.resetCamera()
+  }, [resetCameraSignal])
 
   // Loads the selected model whenever the selection changes. Guards against
   // the classic async race: if the selection changes again before this
