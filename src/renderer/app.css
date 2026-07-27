@@ -1,0 +1,109 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  color: #e6e6e6;
+  background: #1b1b1f;
+  font-family: system-ui, sans-serif;
+}
+
+.empty-state {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.empty-state-open-button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.top-bar {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.breadcrumb-segment {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.9rem;
+}
+
+.breadcrumb-segment:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  opacity: 0.5;
+  padding: 0 0.1rem;
+}
+
+.grid-view {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  align-content: start;
+}
+
+.grid-empty {
+  margin: auto;
+  opacity: 0.6;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  background: #26262c;
+  border: 1px solid #3a3a42;
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+
+.tile:hover {
+  border-color: #6a6af0;
+}
+
+.tile-glyph,
+.tile-thumb-placeholder {
+  font-size: 2.5rem;
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-thumb-placeholder {
+  border: 1px dashed #4a4a52;
+  border-radius: 6px;
+}
+
+.tile-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  font-size: 0.85rem;
+}
