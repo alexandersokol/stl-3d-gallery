@@ -1,6 +1,8 @@
 import { create } from 'zustand'
-import type { ScanResult } from '../../shared/types'
+import type { ModelStats, ScanResult } from '../../shared/types'
 import { api } from '../ipc/api'
+import type { MaterialPreset } from '../viewer/materials'
+import type { LightPreset } from '../viewer/lighting'
 
 export type Mode = 'grid' | 'viewer'
 
@@ -14,8 +16,14 @@ export interface UiState {
   search: string
   activeTags: string[]
   includeSubfolders: boolean
-  material: string
-  lighting: string
+  material: MaterialPreset
+  lighting: LightPreset
+  lightIntensity: number
+  baseColor: string
+  background: 'light' | 'dark'
+  showGrid: boolean
+  autoRotate: boolean
+  currentStats: ModelStats | null
   openFolder(dir: string): Promise<void>
   select(index: number): void
   next(): void
@@ -26,6 +34,14 @@ export interface UiState {
   setSearch(s: string): void
   toggleTag(t: string): void
   setIncludeSubfolders(b: boolean): void
+  setMaterial(preset: MaterialPreset): void
+  setLighting(preset: LightPreset): void
+  setLightIntensity(n: number): void
+  setBaseColor(s: string): void
+  setBackground(m: 'light' | 'dark'): void
+  toggleGrid(): void
+  toggleAutoRotate(): void
+  setCurrentStats(stats: ModelStats | null): void
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -40,6 +56,12 @@ export const useUiStore = create<UiState>((set, get) => ({
   includeSubfolders: false,
   material: 'matte',
   lighting: 'studio',
+  lightIntensity: 1,
+  baseColor: '#b0b6be',
+  background: 'dark',
+  showGrid: false,
+  autoRotate: false,
+  currentStats: null,
 
   openFolder: async (dir) => {
     const scan = await api.scanFolder(dir)
@@ -72,4 +94,12 @@ export const useUiStore = create<UiState>((set, get) => ({
       : [...s.activeTags, t],
   })),
   setIncludeSubfolders: (b) => set({ includeSubfolders: b }),
+  setMaterial: (preset) => set({ material: preset }),
+  setLighting: (preset) => set({ lighting: preset }),
+  setLightIntensity: (n) => set({ lightIntensity: n }),
+  setBaseColor: (s) => set({ baseColor: s }),
+  setBackground: (m) => set({ background: m }),
+  toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
+  toggleAutoRotate: () => set((s) => ({ autoRotate: !s.autoRotate })),
+  setCurrentStats: (stats) => set({ currentStats: stats }),
 }))

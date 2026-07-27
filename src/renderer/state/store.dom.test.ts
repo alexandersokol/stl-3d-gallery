@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { FileEntry, ScanResult } from '../../shared/types'
+import type { FileEntry, ModelStats, ScanResult } from '../../shared/types'
 
 const files: FileEntry[] = [
   { path: '/x/a.stl', name: 'a.stl', size: 1, mtimeMs: 1 },
@@ -34,6 +34,12 @@ describe('useUiStore', () => {
     expect(s.includeSubfolders).toBe(false)
     expect(s.material).toBe('matte')
     expect(s.lighting).toBe('studio')
+    expect(s.lightIntensity).toBe(1)
+    expect(s.baseColor).toBe('#b0b6be')
+    expect(s.background).toBe('dark')
+    expect(s.showGrid).toBe(false)
+    expect(s.autoRotate).toBe(false)
+    expect(s.currentStats).toBeNull()
   })
 
   it('openFolder scans, sets cwd/scan, and resets selection/search/tags', async () => {
@@ -119,5 +125,45 @@ describe('useUiStore', () => {
 
     useUiStore.getState().setIncludeSubfolders(true)
     expect(useUiStore.getState().includeSubfolders).toBe(true)
+  })
+
+  it('setMaterial and setLighting update the respective preset fields', () => {
+    useUiStore.getState().setMaterial('metal')
+    expect(useUiStore.getState().material).toBe('metal')
+
+    useUiStore.getState().setLighting('dramatic')
+    expect(useUiStore.getState().lighting).toBe('dramatic')
+  })
+
+  it('setLightIntensity, setBaseColor, setBackground behave as simple setters', () => {
+    useUiStore.getState().setLightIntensity(1.5)
+    expect(useUiStore.getState().lightIntensity).toBe(1.5)
+
+    useUiStore.getState().setBaseColor('#ff0000')
+    expect(useUiStore.getState().baseColor).toBe('#ff0000')
+
+    useUiStore.getState().setBackground('light')
+    expect(useUiStore.getState().background).toBe('light')
+  })
+
+  it('toggleGrid and toggleAutoRotate flip their booleans', () => {
+    useUiStore.getState().toggleGrid()
+    expect(useUiStore.getState().showGrid).toBe(true)
+    useUiStore.getState().toggleGrid()
+    expect(useUiStore.getState().showGrid).toBe(false)
+
+    useUiStore.getState().toggleAutoRotate()
+    expect(useUiStore.getState().autoRotate).toBe(true)
+    useUiStore.getState().toggleAutoRotate()
+    expect(useUiStore.getState().autoRotate).toBe(false)
+  })
+
+  it('setCurrentStats stores the model stats for the InfoPanel to read later', () => {
+    const stats: ModelStats = { triCount: 10, vertCount: 6, bbox: { x: 1, y: 2, z: 3 } }
+    useUiStore.getState().setCurrentStats(stats)
+    expect(useUiStore.getState().currentStats).toEqual(stats)
+
+    useUiStore.getState().setCurrentStats(null)
+    expect(useUiStore.getState().currentStats).toBeNull()
   })
 })
