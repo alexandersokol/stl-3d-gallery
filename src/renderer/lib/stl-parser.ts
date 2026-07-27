@@ -75,6 +75,10 @@ function parseAsciiSTL(buf: ArrayBuffer): ParsedSTL {
     coords.push(parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3]))
   }
 
+  if (coords.length % 9 !== 0) {
+    throw new Error(`Malformed ASCII STL: ${coords.length / 3} vertices is not a whole number of triangles`)
+  }
+
   const triCount = Math.floor(coords.length / 9)
   const positions = new Float32Array(triCount * 9)
 

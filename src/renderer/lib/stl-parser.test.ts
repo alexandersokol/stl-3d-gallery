@@ -25,4 +25,17 @@ describe('parseSTL', () => {
     const ascii = parseSTL(load('cube-ascii.stl'))
     expect(Array.from(ascii.positions)).toEqual(Array.from(bin.positions))
   })
+
+  it('rejects malformed ASCII STL with incomplete facet (missing vertex)', () => {
+    const malformedSTL = `solid incomplete
+facet normal 0 0 1
+  outer loop
+    vertex 0 0 0
+    vertex 1 0 0
+  endloop
+endfacet
+endsolid incomplete`
+    const buf = new TextEncoder().encode(malformedSTL).buffer
+    expect(() => parseSTL(buf)).toThrow(/Malformed ASCII STL/)
+  })
 })
