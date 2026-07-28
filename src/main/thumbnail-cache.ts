@@ -9,7 +9,9 @@ import { promises as fs } from 'fs'; import path from 'path'
 // (the filename now also carries the preset -- see versionedThumbPath below
 // -- but the version is still bumped here too since the *builtin* default
 // preset/render pipeline changed at the same time).
-export const THUMB_RENDER_VERSION = 3
+// Bumped to 4 when the default thumbnail preset became 'studio' (a lavender
+// studio-clay matcap) so previously-cached thumbnails regenerate.
+export const THUMB_RENDER_VERSION = 4
 
 const thumbDir = (modelPath: string) => path.join(path.dirname(modelPath), '.thumb')
 

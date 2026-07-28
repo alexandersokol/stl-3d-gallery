@@ -63,7 +63,7 @@ export class SceneManager {
   private readonly viewHelper: ViewHelper
   private readonly clock: THREE.Clock
   private readonly envMap: THREE.Texture
-  private readonly matcaps: { clay: THREE.Texture; ceramic: THREE.Texture }
+  private readonly matcaps: { studio: THREE.Texture; ceramic: THREE.Texture }
   private readonly backgroundTextures: { dark: THREE.CanvasTexture; light: THREE.CanvasTexture }
 
   private mesh: THREE.Mesh | null = null
@@ -359,7 +359,7 @@ export class SceneManager {
     this.controls.dispose()
 
     this.envMap.dispose()
-    this.matcaps.clay.dispose()
+    this.matcaps.studio.dispose()
     this.matcaps.ceramic.dispose()
     this.backgroundTextures.dark.dispose()
     this.backgroundTextures.light.dispose()

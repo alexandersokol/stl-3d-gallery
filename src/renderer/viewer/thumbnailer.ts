@@ -25,10 +25,10 @@ interface RendererState {
   envMap: THREE.Texture
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
-  // Built once and reused across calls -- the 'ceramic' preset needs a
-  // matcap texture, and generating one involves a throwaway <canvas> 2D
-  // draw (see matcaps.ts) that's wasteful to repeat on every thumbnail.
-  matcaps: Record<'clay' | 'ceramic', THREE.Texture>
+  // Built once and reused across calls -- the matcap presets ('studio',
+  // 'ceramic') need matcap textures, and generating one involves a throwaway
+  // <canvas> 2D draw (see matcaps.ts) that's wasteful to repeat per thumbnail.
+  matcaps: Record<'studio' | 'ceramic', THREE.Texture>
 }
 
 let state: RendererState | null = null

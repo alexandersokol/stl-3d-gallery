@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 
 const { useUiStore } = await import('../state/store')
 const { default: ViewerToolbar } = await import('./ViewerToolbar')
@@ -35,13 +35,18 @@ describe('<ViewerToolbar/>', () => {
   it('clicking a lighting preset button calls setLighting and marks it active', () => {
     render(<ViewerToolbar />)
 
-    expect(screen.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'true')
+    // Scope to the Lighting group: 'studio' is now BOTH a lighting preset and
+    // a material preset (the studio-clay thumbnail matcap), so it appears as a
+    // button in each group -- query within the right group to disambiguate.
+    const lighting = within(screen.getByRole('group', { name: 'Lighting' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'dramatic' }))
+    expect(lighting.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(lighting.getByRole('button', { name: 'dramatic' }))
 
     expect(useUiStore.getState().lighting).toBe('dramatic')
-    expect(screen.getByRole('button', { name: 'dramatic' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'false')
+    expect(lighting.getByRole('button', { name: 'dramatic' })).toHaveAttribute('aria-pressed', 'true')
+    expect(lighting.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('changing the intensity range calls setLightIntensity', () => {

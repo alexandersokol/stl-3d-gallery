@@ -5,7 +5,15 @@
 
 import * as THREE from 'three'
 
-export type MaterialPreset = 'matte' | 'glossy' | 'metal' | 'clay' | 'ceramic' | 'wireframe' | 'normals'
+export type MaterialPreset =
+  | 'matte'
+  | 'glossy'
+  | 'metal'
+  | 'clay'
+  | 'ceramic'
+  | 'wireframe'
+  | 'normals'
+  | 'studio'
 
 export const MATERIAL_PRESETS: MaterialPreset[] = [
   'clay',
@@ -15,6 +23,10 @@ export const MATERIAL_PRESETS: MaterialPreset[] = [
   'ceramic',
   'wireframe',
   'normals',
+  // 'studio' is the dedicated thumbnail-renderer preset; it's offered in the
+  // 3D-preview material picker too, but listed LAST since its primary home is
+  // the thumbnails (it's their default). See makeMaterial() / matcaps.ts.
+  'studio',
 ]
 
 // Single source of truth for the default model base color (a medium neutral
@@ -27,18 +39,19 @@ export const DEFAULT_BASE_COLOR = '#a9adb3'
  * Builds the THREE.Material for a given preset.
  *
  * `baseColor` (a CSS hex string) is applied to the lit presets (clay, matte,
- * glossy, metal) and to wireframe; the ceramic matcap preset and the normals
- * preset ignore it entirely since their appearance comes from the baked-in
- * ceramic matcap texture or the surface normal itself (normals) instead.
+ * glossy, metal) and to wireframe; the matcap presets (studio, ceramic) and
+ * the normals preset ignore it entirely since their appearance comes from the
+ * baked-in matcap texture or the surface normal itself (normals) instead.
  *
- * `matcaps` must contain a pre-loaded texture for the ceramic preset;
- * loading it is the caller's responsibility (matcap loading touches the
- * filesystem/network and doesn't belong in a pure factory).
+ * `matcaps` must contain pre-loaded textures for the matcap presets
+ * (`studio`, `ceramic`); loading them is the caller's responsibility (matcap
+ * loading touches the filesystem/network and doesn't belong in a pure
+ * factory).
  */
 export function makeMaterial(
   preset: MaterialPreset,
   baseColor: string,
-  matcaps: Record<'clay' | 'ceramic', THREE.Texture>,
+  matcaps: Record<'studio' | 'ceramic', THREE.Texture>,
 ): THREE.Material {
   switch (preset) {
     case 'clay':
@@ -54,6 +67,13 @@ export function makeMaterial(
       return new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.35, metalness: 1.0 })
     case 'ceramic':
       return new THREE.MeshMatcapMaterial({ matcap: matcaps.ceramic })
+    case 'studio':
+      // Dedicated thumbnail-renderer preset. A matcap bakes its lighting,
+      // soft shadow and color into the texture and ignores the scene's
+      // lights/environment, so it renders identically in the offscreen
+      // thumbnailer and the live viewer (their light rigs differ). baseColor
+      // is intentionally ignored — the look is fully defined by the matcap.
+      return new THREE.MeshMatcapMaterial({ matcap: matcaps.studio })
     case 'wireframe':
       return new THREE.MeshBasicMaterial({ color: baseColor, wireframe: true })
     case 'normals':
