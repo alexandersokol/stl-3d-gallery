@@ -22,11 +22,14 @@ function drawMatcap(stops: Array<[number, string]>, bg: string): HTMLCanvasEleme
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, SIZE, SIZE)
 
-  // Radial gradient centered slightly up-left of the canvas center, mimicking
-  // a key light hitting a sphere from the upper-left — the classic matcap
-  // "shiny ball" look.
-  const cx = SIZE * 0.4
-  const cy = SIZE * 0.38
+  // Radial gradient centered near the canvas center (nudged only slightly
+  // above it). In matcap space the texture center maps to surface normals
+  // facing the camera, so keeping the highlight there makes the light read as
+  // coming from the FRONT (a touch above), lighting the model's camera-facing
+  // surfaces — rather than from the top/behind, which a strongly off-center
+  // (e.g. upper-left) highlight produces.
+  const cx = SIZE * 0.5
+  const cy = SIZE * 0.44
   const gradient = ctx.createRadialGradient(cx, cy, 0, SIZE * 0.5, SIZE * 0.5, SIZE * 0.72)
   for (const [offset, color] of stops) {
     gradient.addColorStop(offset, color)
@@ -63,33 +66,34 @@ export function makeMatcaps(): {
   studio: THREE.Texture
   ceramic: THREE.Texture
 } {
-  // Solid View: Blender "solid mode" look — a neutral matte grey clay. Soft
+  // Solid View: Blender "solid mode" look — a neutral matte grey clay, a bit
+  // darker overall with darker shadows (but not as dark as Studio). Soft
   // light-grey highlight (no bright specular hotspot, so it reads matte), a
-  // mid grey body, gentle darkening toward the silhouette for a soft
+  // mid grey body, strong darkening toward the silhouette for a soft
   // ambient-occlusion feel. The 3D-preview default material.
   const solidviewCanvas = drawMatcap(
     [
-      [0, '#d3d4d7'],
-      [0.4, '#b7b8bc'],
-      [0.72, '#8b8d94'],
-      [1, '#53555d'],
+      [0, '#c9cacd'],
+      [0.4, '#a4a5aa'],
+      [0.72, '#727479'],
+      [1, '#3d3f46'],
     ],
-    '#484a52',
+    '#3a3c42',
   )
 
-  // Studio: the dedicated thumbnail-renderer look — a smooth lavender "studio
-  // clay". Soft light-lavender highlight (kept matte — no near-white specular
-  // hotspot), a lavender-grey body, then a deep cool purple-blue silhouette
-  // edge, over a dark purple background (visible only at the sphere's very
-  // rim). Tuned to match the reference thumbnails.
+  // Studio: the dedicated thumbnail-renderer look — a matte "studio clay".
+  // Predominantly neutral grey with just a whisper of cool lavender (blue a
+  // touch above red/green), and the darkest shadows of the matcap presets.
+  // Soft light highlight (matte, no near-white specular hotspot) fading to a
+  // deep near-black cool grey at the silhouette. Tuned to the reference thumbs.
   const studioCanvas = drawMatcap(
     [
-      [0, '#dcd7ee'],
-      [0.4, '#b8b1d2'],
-      [0.72, '#8a83ac'],
-      [1, '#3f3b58'],
+      [0, '#d5d5de'],
+      [0.4, '#a4a4b2'],
+      [0.72, '#666675'],
+      [1, '#2c2c39'],
     ],
-    '#2a2740',
+    '#24242e',
   )
 
   // Ceramic: brighter, cooler studio look — crisp near-white highlight, light

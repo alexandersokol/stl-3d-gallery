@@ -12,7 +12,9 @@ import { promises as fs } from 'fs'; import path from 'path'
 // Bumped to 4 when the default thumbnail preset became 'studio' (a lavender
 // studio-clay matcap) so previously-cached thumbnails regenerate.
 // Bumped to 5 when the studio matcap was retuned to be less glossy (matte).
-export const THUMB_RENDER_VERSION = 5
+// Bumped to 6 when the studio matcap was retuned greyer/darker and the matcap
+// key light was moved to the front.
+export const THUMB_RENDER_VERSION = 6
 
 const thumbDir = (modelPath: string) => path.join(path.dirname(modelPath), '.thumb')
 
