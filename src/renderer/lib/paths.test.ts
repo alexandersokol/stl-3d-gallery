@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dirname } from './paths'
+import { dirname, basename } from './paths'
 
 describe('dirname', () => {
   it('returns the parent directory of a POSIX path', () => {
@@ -24,5 +24,31 @@ describe('dirname', () => {
 
   it('handles nested Windows paths', () => {
     expect(dirname('C:\\models\\sub\\leaf\\b.stl')).toBe('C:\\models\\sub\\leaf')
+  })
+})
+
+describe('basename', () => {
+  it('returns the final segment of a POSIX path', () => {
+    expect(basename('/root/sub/models')).toBe('models')
+  })
+
+  it('returns the final segment of a Windows drive-letter path', () => {
+    expect(basename('C:\\Users\\me\\models')).toBe('models')
+  })
+
+  it('returns the POSIX root when given the root itself', () => {
+    expect(basename('/')).toBe('/')
+  })
+
+  it('returns the Windows drive root when given the root itself', () => {
+    expect(basename('C:\\')).toBe('C:\\')
+  })
+
+  it('handles a single-segment POSIX path', () => {
+    expect(basename('/models')).toBe('models')
+  })
+
+  it('handles a single-segment Windows path', () => {
+    expect(basename('C:\\models')).toBe('models')
   })
 })

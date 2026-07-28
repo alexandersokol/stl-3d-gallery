@@ -2,12 +2,12 @@
   "name": "stl-gallery",
   "version": "1.0.0",
   "main": "out/main/index.js",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "dist": "electron-vite build && electron-builder",
+    "dist:dir": "electron-vite build && electron-builder --dir",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test"
@@ -36,6 +36,7 @@
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "jsdom": "^25.0.1",
+    "patch-package": "^8.0.1",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",
     "vitest": "^4.1.10"

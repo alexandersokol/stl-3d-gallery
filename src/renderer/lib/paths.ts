@@ -54,3 +54,21 @@ export function dirname(p: string): string {
   if (parts.length <= 1) return '/'
   return `/${parts.slice(0, -1).join('/')}`
 }
+
+/**
+ * Returns the final path segment (file or folder name) of an absolute OS
+ * path. Handles both POSIX and Windows drive-letter paths, since the
+ * renderer has no access to Node's `path` module. Used to label the
+ * "Reopen <folder>" button with just the folder's name rather than its
+ * full path.
+ */
+export function basename(p: string): string {
+  if (WINDOWS_ROOT.test(p)) {
+    const root = p.slice(0, 3) // e.g. "C:\\"
+    const rest = p.slice(3).split('\\').filter(Boolean)
+    return rest.length > 0 ? rest[rest.length - 1] : root
+  }
+
+  const parts = p.split('/').filter(Boolean)
+  return parts.length > 0 ? parts[parts.length - 1] : '/'
+}

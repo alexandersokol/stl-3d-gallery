@@ -6,7 +6,8 @@ dist/
 dist-electron/
 out/
 release/
-build/
+build/*
+!build/icon.png
 .vite/
 
 # Test / coverage

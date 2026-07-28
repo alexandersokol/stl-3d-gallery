@@ -42,6 +42,7 @@ const taggedMeta: Record<string, Metadata> = {
 const scanFolder = vi.fn().mockResolvedValue(scanResult)
 const openFolderDialog = vi.fn()
 const setLastFolder = vi.fn()
+const getLastFolder = vi.fn().mockResolvedValue(null)
 const readFileBytes = vi.fn()
 // InfoPanel reads/writes metadata for the selected file. Not under test
 // here (see InfoPanel.dom.test.tsx) -- just stubbed so App-level tests that
@@ -70,6 +71,7 @@ vi.mock('./ipc/api', () => ({
     scanFolder: (...args: unknown[]) => scanFolder(...args),
     openFolderDialog: (...args: unknown[]) => openFolderDialog(...args),
     setLastFolder: (...args: unknown[]) => setLastFolder(...args),
+    getLastFolder: (...args: unknown[]) => getLastFolder(...args),
     readFileBytes: (...args: unknown[]) => readFileBytes(...args),
     readMetadata: (...args: unknown[]) => readMetadata(...args),
     writeMetadata: (...args: unknown[]) => writeMetadata(...args),
@@ -132,6 +134,8 @@ beforeEach(() => {
   scanFolder.mockResolvedValue(scanResult)
   openFolderDialog.mockReset()
   setLastFolder.mockClear()
+  getLastFolder.mockReset()
+  getLastFolder.mockResolvedValue(null)
   readFileBytes.mockReset()
   readFileBytes.mockResolvedValue(new ArrayBuffer(8))
   readMetadata.mockReset()
