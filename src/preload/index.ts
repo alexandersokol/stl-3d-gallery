@@ -22,6 +22,7 @@ const api: Api = {
   copyModel: (model, newName) => ipcRenderer.invoke('copyModel', model, newName),
   moveModel: (model) => ipcRenderer.invoke('moveModel', model),
   deleteModel: (model) => ipcRenderer.invoke('deleteModel', model),
+  writeStlFile: (model, bytes) => ipcRenderer.invoke('writeStlFile', model, bytes),
   getLastFolder: () => ipcRenderer.invoke('getLastFolder'),
   setLastFolder: (dir) => ipcRenderer.invoke('setLastFolder', dir),
   onOpenFile: (cb) => ipcRenderer.on('open-file', (_e, path: string) => cb(path)),

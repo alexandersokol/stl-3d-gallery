@@ -4,7 +4,7 @@ import { scanFolder, scanTree } from './fs-scanner'
 import { readMetadata, writeMetadata, readMetadataBatch } from './metadata-store'
 import { readThumbnail, writeThumbnail } from './thumbnail-cache'
 import { readLinkedImage, writeLinkedImage, removeLinkedImage } from './linked-image-store'
-import { renameModel, copyModel, moveModel, deleteModel } from './file-ops'
+import { renameModel, copyModel, moveModel, deleteModel, writeRepairedModel } from './file-ops'
 import { appState } from './app-state'
 import path from 'path'
 import { parseStartupFolder } from './startup-args'
@@ -95,6 +95,10 @@ export function registerIpc(): void {
 
   ipcMain.handle('deleteModel', async (_e, model: string) => {
     await deleteModel(model)
+  })
+
+  ipcMain.handle('writeStlFile', async (_e, model: string, bytes: ArrayBuffer) => {
+    return writeRepairedModel(model, bytes)
   })
 
   ipcMain.handle('getLastFolder', async () => {

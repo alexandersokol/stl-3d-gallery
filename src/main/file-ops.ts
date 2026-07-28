@@ -157,6 +157,28 @@ export async function moveModel(modelPath: string, targetDir: string): Promise<F
   return { path: newModelPath }
 }
 
+// Writes repaired STL bytes next to the source model as `<name>-fixed.stl`,
+// bumping to `-fixed-2.stl`, `-fixed-3.stl`, … if a name is already taken, so
+// a repaired file never clobbers an existing one. The source is left
+// untouched; the new file has no sidecars (a fresh thumbnail regenerates on
+// first view). Returns the new model path.
+export async function writeRepairedModel(
+  sourceModelPath: string,
+  bytes: ArrayBuffer,
+): Promise<FileOpResult> {
+  const dir = path.dirname(sourceModelPath)
+  const base = path.basename(sourceModelPath)
+  const stem = base.toLowerCase().endsWith('.stl') ? base.slice(0, -4) : base
+
+  let target = path.join(dir, `${stem}-fixed.stl`)
+  for (let n = 2; await pathExists(target); n++) {
+    target = path.join(dir, `${stem}-fixed-${n}.stl`)
+  }
+
+  await fs.writeFile(target, Buffer.from(bytes))
+  return { path: target }
+}
+
 // Moves the model and every sidecar to the OS trash (recoverable). Missing
 // files are skipped rather than failing the whole delete.
 export async function deleteModel(modelPath: string): Promise<void> {
