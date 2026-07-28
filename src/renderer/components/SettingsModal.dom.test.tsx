@@ -40,7 +40,7 @@ describe('<SettingsModal/>', () => {
     useUiStore.setState({ settingsOpen: true })
     render(<SettingsModal />)
 
-    expect(useUiStore.getState().thumbnailPreset).toBe('clay')
+    expect(useUiStore.getState().thumbnailPreset).toBe('studio')
 
     fireEvent.change(screen.getByLabelText('Thumbnail render preset'), { target: { value: 'metal' } })
     expect(useUiStore.getState().thumbnailPreset).toBe('metal')

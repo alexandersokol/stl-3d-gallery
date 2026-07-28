@@ -91,7 +91,7 @@ describe('<ModelTile/> thumbnails', () => {
     const img = await screen.findByRole('img')
     expect(img).toHaveAttribute('src', 'blob:mock-url')
 
-    expect(readThumbnail).toHaveBeenCalledWith(file.path, 'clay')
+    expect(readThumbnail).toHaveBeenCalledWith(file.path, 'studio')
     expect(readFileBytes).not.toHaveBeenCalled()
     expect(loadModel).not.toHaveBeenCalled()
     expect(renderThumbnail).not.toHaveBeenCalled()
@@ -120,9 +120,9 @@ describe('<ModelTile/> thumbnails', () => {
     expect(readFileBytes).toHaveBeenCalledWith(file.path)
     expect(loadModel).toHaveBeenCalledTimes(1)
     expect(renderThumbnail).toHaveBeenCalledTimes(1)
-    expect(renderThumbnail).toHaveBeenCalledWith(expect.any(Float32Array), 'clay')
+    expect(renderThumbnail).toHaveBeenCalledWith(expect.any(Float32Array), 'studio')
     expect(writeThumbnail).toHaveBeenCalledTimes(1)
-    expect(writeThumbnail).toHaveBeenCalledWith(file.path, 'clay', expect.any(ArrayBuffer))
+    expect(writeThumbnail).toHaveBeenCalledWith(file.path, 'studio', expect.any(ArrayBuffer))
 
     // Occurred in the documented pipeline order: read -> parse -> render -> persist.
     const order = [readFileBytes, loadModel, renderThumbnail, writeThumbnail].map(

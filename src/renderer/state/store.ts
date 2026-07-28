@@ -25,9 +25,9 @@ const THUMBNAIL_PRESET_STORAGE_KEY = 'stl-gallery:thumbnailPreset'
 function readStoredThumbnailPreset(): MaterialPreset {
   try {
     const stored = localStorage.getItem(THUMBNAIL_PRESET_STORAGE_KEY)
-    return stored && (MATERIAL_PRESETS as string[]).includes(stored) ? (stored as MaterialPreset) : 'clay'
+    return stored && (MATERIAL_PRESETS as string[]).includes(stored) ? (stored as MaterialPreset) : 'studio'
   } catch {
-    return 'clay'
+    return 'studio'
   }
 }
 
@@ -127,7 +127,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   search: '',
   activeTags: [],
   includeSubfolders: false,
-  material: 'clay',
+  material: 'solidview',
   thumbnailPreset: readStoredThumbnailPreset(),
   cameraMode: readStoredCameraMode(),
   settingsOpen: false,

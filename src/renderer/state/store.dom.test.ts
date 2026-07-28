@@ -33,8 +33,8 @@ describe('useUiStore', () => {
     expect(s.search).toBe('')
     expect(s.activeTags).toEqual([])
     expect(s.includeSubfolders).toBe(false)
-    expect(s.material).toBe('clay')
-    expect(s.thumbnailPreset).toBe('clay')
+    expect(s.material).toBe('solidview')
+    expect(s.thumbnailPreset).toBe('studio')
     expect(s.cameraMode).toBe('fly')
     expect(s.settingsOpen).toBe(false)
     expect(s.lighting).toBe('studio')
@@ -142,8 +142,8 @@ describe('useUiStore', () => {
     expect(useUiStore.getState().lighting).toBe('dramatic')
   })
 
-  it('setThumbnailPreset defaults to clay, updates the field, and persists the choice to localStorage', () => {
-    expect(useUiStore.getState().thumbnailPreset).toBe('clay')
+  it('setThumbnailPreset defaults to studio, updates the field, and persists the choice to localStorage', () => {
+    expect(useUiStore.getState().thumbnailPreset).toBe('studio')
 
     useUiStore.getState().setThumbnailPreset('ceramic')
     expect(useUiStore.getState().thumbnailPreset).toBe('ceramic')

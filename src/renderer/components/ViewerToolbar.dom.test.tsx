@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 
 const { useUiStore } = await import('../state/store')
 const { default: ViewerToolbar } = await import('./ViewerToolbar')
@@ -13,14 +13,27 @@ describe('<ViewerToolbar/>', () => {
   it('clicking a material preset button calls setMaterial and marks it active', () => {
     render(<ViewerToolbar />)
 
-    expect(screen.getByRole('button', { name: 'clay' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'metal' })).toHaveAttribute('aria-pressed', 'false')
+    // 'solidview' (label "Solid View") is the 3D-preview default material.
+    expect(screen.getByRole('button', { name: 'Solid View' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Metal' })).toHaveAttribute('aria-pressed', 'false')
 
-    fireEvent.click(screen.getByRole('button', { name: 'metal' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Metal' }))
 
     expect(useUiStore.getState().material).toBe('metal')
-    expect(screen.getByRole('button', { name: 'metal' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'clay' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Metal' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Solid View' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('renders the material presets in two groups split by a separator', () => {
+    render(<ViewerToolbar />)
+
+    const materialGroup = within(screen.getByRole('group', { name: 'Material' }))
+    // Primary presets are present with friendly labels...
+    expect(materialGroup.getByRole('button', { name: 'Solid View' })).toBeInTheDocument()
+    expect(materialGroup.getByRole('button', { name: 'Studio' })).toBeInTheDocument()
+    // ...and a separator divides them from the secondary presets.
+    expect(materialGroup.getByRole('separator')).toBeInTheDocument()
+    expect(materialGroup.getByRole('button', { name: 'Ceramic' })).toBeInTheDocument()
   })
 
   it('changing the base color input calls setBaseColor', () => {
@@ -35,13 +48,18 @@ describe('<ViewerToolbar/>', () => {
   it('clicking a lighting preset button calls setLighting and marks it active', () => {
     render(<ViewerToolbar />)
 
-    expect(screen.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'true')
+    // Scope to the Lighting group: 'studio' is now BOTH a lighting preset and
+    // a material preset (the studio-clay thumbnail matcap), so it appears as a
+    // button in each group -- query within the right group to disambiguate.
+    const lighting = within(screen.getByRole('group', { name: 'Lighting' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'dramatic' }))
+    expect(lighting.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(lighting.getByRole('button', { name: 'dramatic' }))
 
     expect(useUiStore.getState().lighting).toBe('dramatic')
-    expect(screen.getByRole('button', { name: 'dramatic' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'false')
+    expect(lighting.getByRole('button', { name: 'dramatic' })).toHaveAttribute('aria-pressed', 'true')
+    expect(lighting.getByRole('button', { name: 'studio' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('changing the intensity range calls setLightIntensity', () => {
