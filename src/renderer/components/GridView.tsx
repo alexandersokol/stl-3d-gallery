@@ -8,6 +8,7 @@ export default function GridView() {
   const search = useUiStore((s) => s.search)
   const activeTags = useUiStore((s) => s.activeTags)
   const metaByPath = useUiStore((s) => s.metaByPath)
+  const thumbnailPreset = useUiStore((s) => s.thumbnailPreset)
 
   if (!scan) return null
 
@@ -29,7 +30,11 @@ export default function GridView() {
         <FolderTile key={folder.path} folder={folder} />
       ))}
       {models.map((file) => (
-        <ModelTile key={file.path} file={file} />
+        // Keying on preset (not just path) forces ModelTile to remount when
+        // the Settings screen's thumbnail preset changes, so the grid picks
+        // up regenerated thumbnails instead of showing stale ones -- see
+        // ModelTile's per-mount thumbnail-load effect.
+        <ModelTile key={`${file.path}::${thumbnailPreset}`} file={file} />
       ))}
     </div>
   )

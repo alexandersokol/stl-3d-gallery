@@ -35,6 +35,8 @@ describe('useUiStore', () => {
     expect(s.includeSubfolders).toBe(false)
     expect(s.material).toBe('clay')
     expect(s.thumbnailPreset).toBe('clay')
+    expect(s.cameraMode).toBe('fly')
+    expect(s.settingsOpen).toBe(false)
     expect(s.lighting).toBe('studio')
     expect(s.lightIntensity).toBe(1)
     expect(s.baseColor).toBe(DEFAULT_BASE_COLOR)
@@ -150,6 +152,28 @@ describe('useUiStore', () => {
     useUiStore.getState().setThumbnailPreset('clay')
     expect(useUiStore.getState().thumbnailPreset).toBe('clay')
     expect(localStorage.getItem('stl-gallery:thumbnailPreset')).toBe('clay')
+  })
+
+  it('setCameraMode defaults to fly, updates the field, and persists the choice to localStorage', () => {
+    expect(useUiStore.getState().cameraMode).toBe('fly')
+
+    useUiStore.getState().setCameraMode('surface')
+    expect(useUiStore.getState().cameraMode).toBe('surface')
+    expect(localStorage.getItem('stl-gallery:cameraMode')).toBe('surface')
+
+    useUiStore.getState().setCameraMode('fly')
+    expect(useUiStore.getState().cameraMode).toBe('fly')
+    expect(localStorage.getItem('stl-gallery:cameraMode')).toBe('fly')
+  })
+
+  it('openSettings/closeSettings toggle settingsOpen', () => {
+    expect(useUiStore.getState().settingsOpen).toBe(false)
+
+    useUiStore.getState().openSettings()
+    expect(useUiStore.getState().settingsOpen).toBe(true)
+
+    useUiStore.getState().closeSettings()
+    expect(useUiStore.getState().settingsOpen).toBe(false)
   })
 
   it('setLightIntensity, setBaseColor, setBackground behave as simple setters', () => {

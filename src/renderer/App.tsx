@@ -11,6 +11,7 @@ import Viewer from './components/Viewer'
 import ViewerToolbar from './components/ViewerToolbar'
 import Filmstrip from './components/Filmstrip'
 import InfoPanel from './components/InfoPanel'
+import SettingsModal from './components/SettingsModal'
 import {
   GridViewIcon,
   ViewInArIcon,
@@ -18,6 +19,7 @@ import {
   VisibilityIcon,
   DarkModeIcon,
   LightModeIcon,
+  SettingsIcon,
 } from './assets/icons'
 
 // True when the keyboard event originated in something the user is typing
@@ -40,6 +42,7 @@ export default function App() {
   const showInfo = useUiStore((s) => s.showInfo)
   const toggleFilmstrip = useUiStore((s) => s.toggleFilmstrip)
   const toggleInfo = useUiStore((s) => s.toggleInfo)
+  const openSettings = useUiStore((s) => s.openSettings)
 
   // Subscribes once to the main process's forwarded 'open-file' path (a
   // single .stl opened from the OS -- Task 7.1) and opens its parent folder,
@@ -122,6 +125,15 @@ export default function App() {
         >
           {uiTheme === 'dark' ? <DarkModeIcon /> : <LightModeIcon />}
         </button>
+        <button
+          type="button"
+          className="settings-button"
+          aria-label="Settings"
+          title="Settings"
+          onClick={openSettings}
+        >
+          <SettingsIcon />
+        </button>
         {mode === 'grid' && (
           <div className="grid-filters">
             <SearchBox />
@@ -154,6 +166,8 @@ export default function App() {
           {showInfo && <InfoPanel />}
         </div>
       )}
+
+      <SettingsModal />
     </div>
   )
 }

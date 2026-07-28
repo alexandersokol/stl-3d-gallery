@@ -18,9 +18,8 @@ export type Mode = 'grid' | 'viewer'
 
 // Persists the configured thumbnail-rendering material preset (separate
 // from `material`, which is the live 3D-preview material) across restarts,
-// the same way `uiTheme` is persisted above. A future Settings screen will
-// expose a picker for this; this store field/default is the plumbing it
-// will drive.
+// the same way `uiTheme` is persisted above. Exposed via the Settings screen
+// (SettingsModal.tsx).
 const THUMBNAIL_PRESET_STORAGE_KEY = 'stl-gallery:thumbnailPreset'
 
 function readStoredThumbnailPreset(): MaterialPreset {
@@ -29,6 +28,22 @@ function readStoredThumbnailPreset(): MaterialPreset {
     return stored && (MATERIAL_PRESETS as string[]).includes(stored) ? (stored as MaterialPreset) : 'clay'
   } catch {
     return 'clay'
+  }
+}
+
+// Persists the viewer's camera navigation mode across restarts, the same
+// way `uiTheme`/`thumbnailPreset` are persisted above. Exposed via the
+// Settings screen (SettingsModal.tsx); driven into the live engine by
+// Viewer.tsx calling SceneManager.setCameraMode().
+export type CameraMode = 'fly' | 'surface'
+const CAMERA_MODE_STORAGE_KEY = 'stl-gallery:cameraMode'
+
+function readStoredCameraMode(): CameraMode {
+  try {
+    const stored = localStorage.getItem(CAMERA_MODE_STORAGE_KEY)
+    return stored === 'surface' ? 'surface' : 'fly'
+  } catch {
+    return 'fly'
   }
 }
 
@@ -49,6 +64,13 @@ export interface UiState {
   // persists to localStorage; a future Settings screen will expose a picker
   // for it.
   thumbnailPreset: MaterialPreset
+  // Viewer camera navigation mode: 'fly' allows dollying through/inside the
+  // model (fly-through inspection); 'surface' stops the camera just outside
+  // the model's surface. Defaults to 'fly' and persists to localStorage.
+  // Driven into the live SceneManager by Viewer.tsx.
+  cameraMode: CameraMode
+  // Whether the Settings modal (SettingsModal.tsx) is currently open.
+  settingsOpen: boolean
   lighting: LightPreset
   lightIntensity: number
   baseColor: string
@@ -80,6 +102,9 @@ export interface UiState {
   setIncludeSubfolders(b: boolean): void
   setMaterial(preset: MaterialPreset): void
   setThumbnailPreset(preset: MaterialPreset): void
+  setCameraMode(mode: CameraMode): void
+  openSettings(): void
+  closeSettings(): void
   setLighting(preset: LightPreset): void
   setLightIntensity(n: number): void
   setBaseColor(s: string): void
@@ -104,6 +129,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   includeSubfolders: false,
   material: 'clay',
   thumbnailPreset: readStoredThumbnailPreset(),
+  cameraMode: readStoredCameraMode(),
+  settingsOpen: false,
   lighting: 'studio',
   lightIntensity: 1,
   baseColor: DEFAULT_BASE_COLOR,
@@ -181,6 +208,18 @@ export const useUiStore = create<UiState>((set, get) => ({
       }
       return { thumbnailPreset: preset }
     }),
+  setCameraMode: (mode) =>
+    set(() => {
+      try {
+        localStorage.setItem(CAMERA_MODE_STORAGE_KEY, mode)
+      } catch {
+        // Storage may be unavailable -- the choice still applies for the
+        // current session, it just won't survive a restart.
+      }
+      return { cameraMode: mode }
+    }),
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
   setLighting: (preset) => set({ lighting: preset }),
   setLightIntensity: (n) => set({ lightIntensity: n }),
   setBaseColor: (s) => set({ baseColor: s }),

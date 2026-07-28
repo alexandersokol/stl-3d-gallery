@@ -101,6 +101,7 @@ class MockSceneManager {
   setMaterial = vi.fn()
   setLighting = vi.fn()
   setBackground = vi.fn()
+  setCameraMode = vi.fn()
   setGrid = vi.fn()
   setAutoRotate = vi.fn()
   resetCamera = vi.fn()
@@ -292,6 +293,21 @@ describe('<App/> UI theme toggle', () => {
     fireEvent.click(toggleButton)
     expect(useUiStore.getState().uiTheme).toBe('dark')
     await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'dark'))
+  })
+})
+
+describe('<App/> settings', () => {
+  it('renders a Settings gear button that opens the settings modal', async () => {
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument()
+
+    const settingsButton = screen.getByRole('button', { name: 'Settings' })
+    fireEvent.click(settingsButton)
+
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
+    expect(useUiStore.getState().settingsOpen).toBe(true)
   })
 })
 
