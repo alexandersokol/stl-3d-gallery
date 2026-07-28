@@ -5,6 +5,7 @@ import { api } from '../ipc/api'
 import { loadModel } from '../lib/load-model'
 import { renderThumbnail } from '../viewer/thumbnailer'
 import { thumbnailLimiter } from '../lib/concurrency'
+import FileActionsMenu from './FileActionsMenu'
 
 export default function ModelTile({ file }: { file: FileEntry }) {
   const select = useUiStore((s) => s.select)
@@ -87,15 +88,21 @@ export default function ModelTile({ file }: { file: FileEntry }) {
   }, [file.path])
 
   return (
-    <button type="button" ref={tileRef} className="tile model-tile" onClick={handleClick} title={file.name}>
-      {thumbUrl ? (
-        <img src={thumbUrl} alt={file.name} className="tile-thumb" />
-      ) : (
-        <span className="tile-thumb-placeholder" aria-hidden="true">
-          🧊
-        </span>
-      )}
-      <span className="tile-name">{file.name}</span>
-    </button>
+    // A wrapper (not a button) hosts both the click-to-open tile button and
+    // the file-actions menu button, since a <button> can't nest inside another
+    // <button>. The menu positions itself in the top-right corner.
+    <div className="model-tile-wrapper">
+      <button type="button" ref={tileRef} className="tile model-tile" onClick={handleClick} title={file.name}>
+        {thumbUrl ? (
+          <img src={thumbUrl} alt={file.name} className="tile-thumb" />
+        ) : (
+          <span className="tile-thumb-placeholder" aria-hidden="true">
+            🧊
+          </span>
+        )}
+        <span className="tile-name">{file.name}</span>
+      </button>
+      <FileActionsMenu path={file.path} />
+    </div>
   )
 }

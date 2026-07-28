@@ -7,6 +7,7 @@ import { UI_THEME_STORAGE_KEY, readStoredUiTheme, type UiTheme } from '../theme'
 
 export type { UiTheme }
 export type Mode = 'grid' | 'viewer'
+export type FileActionKind = 'rename' | 'copy' | 'delete'
 
 // Persists the app-chrome theme (panels/bars/cards -- NOT the viewer's
 // scene background, which is the separate `background` field below) across
@@ -89,6 +90,14 @@ export interface UiState {
   // into the imperative three.js engine directly, so this is the signal
   // that bridges the two.
   resetCameraSignal: number
+  // Drives the rename/copy/delete dialogs (FileActionDialogs). `path` is the
+  // model the action targets (the viewer's current model, or a grid tile).
+  // Move needs no dialog (it uses the native folder picker) so it isn't
+  // represented here. Null when no dialog is open.
+  fileAction: { kind: FileActionKind; path: string } | null
+  // Transient error message from a file operation with no open dialog to show
+  // it (currently just Move); surfaced as a dismissible toast.
+  fileActionError: string | null
   openFolder(dir: string): Promise<void>
   select(index: number): void
   next(): void
@@ -114,6 +123,17 @@ export interface UiState {
   setCurrentStats(stats: ModelStats | null): void
   setMeta(path: string, meta: Metadata): void
   requestResetCamera(): void
+  // File operations (see file-ops in main). beginFileAction opens a dialog;
+  // the confirm* actions run the op then reconcile the folder/selection.
+  // moveFile and the confirm* actions may reject so a dialog can show the
+  // error; moveFile handles its own error via fileActionError.
+  beginFileAction(kind: FileActionKind, path: string): void
+  closeFileAction(): void
+  dismissFileActionError(): void
+  moveFile(path: string): Promise<void>
+  confirmRename(newName: string): Promise<void>
+  confirmCopy(newName: string): Promise<void>
+  confirmDelete(): Promise<void>
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -140,6 +160,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   currentStats: null,
   metaByPath: {},
   resetCameraSignal: 0,
+  fileAction: null,
+  fileActionError: null,
 
   openFolder: async (dir) => {
     const scan = await api.scanFolder(dir)
@@ -229,4 +251,117 @@ export const useUiStore = create<UiState>((set, get) => ({
   setCurrentStats: (stats) => set({ currentStats: stats }),
   setMeta: (path, meta) => set((s) => ({ metaByPath: { ...s.metaByPath, [path]: meta } })),
   requestResetCamera: () => set((s) => ({ resetCameraSignal: s.resetCameraSignal + 1 })),
+
+  beginFileAction: (kind, path) => set({ fileAction: { kind, path }, fileActionError: null }),
+  closeFileAction: () => set({ fileAction: null }),
+  dismissFileActionError: () => set({ fileActionError: null }),
+
+  confirmRename: async (newName) => {
+    const action = get().fileAction
+    if (!action) return
+    // Whether we're currently viewing the model being renamed (so we should
+    // follow it), vs renaming a grid tile (stay in the grid).
+    const s = get()
+    const selPath =
+      s.scan !== null && s.selectedIndex !== null ? (s.scan.files[s.selectedIndex]?.path ?? null) : null
+    const wasViewing = s.mode === 'viewer' && selPath === action.path
+
+    const { path } = await api.renameModel(action.path, newName)
+    set({ fileAction: null })
+    if (wasViewing) await openAfterOp(path)
+    else await rescanKeepingMode()
+  },
+
+  confirmCopy: async (newName) => {
+    const action = get().fileAction
+    if (!action) return
+    const { path } = await api.copyModel(action.path, newName)
+    set({ fileAction: null })
+    await openAfterOp(path) // switch to the new copy
+  },
+
+  confirmDelete: async () => {
+    const action = get().fileAction
+    if (!action) return
+    await api.deleteModel(action.path)
+    set({ fileAction: null })
+    await rescanAfterRemoval()
+  },
+
+  moveFile: async (path) => {
+    try {
+      const res = await api.moveModel(path)
+      if (!res) return // user canceled the native folder picker
+      await rescanAfterRemoval()
+    } catch (err: any) {
+      set({ fileActionError: err?.message ?? 'Move failed.' })
+    }
+  },
 }))
+
+// --- Post-operation folder reconciliation -------------------------------
+// Defined after the store so they can drive it via getState/setState. They
+// run only after an op has already succeeded, so failures here are logged,
+// not surfaced (the files are already changed on disk regardless).
+
+async function rescanCwd(): Promise<ScanResult | null> {
+  const { cwd } = useUiStore.getState()
+  if (!cwd) return null
+  const scan = await api.scanFolder(cwd)
+  try {
+    const meta = await api.readMetadataBatch(scan.files.map((f) => f.path))
+    useUiStore.setState((s) => ({ metaByPath: { ...s.metaByPath, ...meta } }))
+  } catch (err) {
+    console.error('rescanCwd: failed to batch-read metadata', err)
+  }
+  return scan
+}
+
+// Re-scan and open `targetPath` in the viewer (used by copy, and by rename of
+// the currently-viewed model). Falls back to a plain refresh if the target
+// somehow isn't present.
+async function openAfterOp(targetPath: string): Promise<void> {
+  try {
+    const scan = await rescanCwd()
+    if (!scan) return
+    const idx = scan.files.findIndex((f) => f.path === targetPath)
+    if (idx >= 0) useUiStore.setState({ scan, selectedIndex: idx, mode: 'viewer' })
+    else useUiStore.setState({ scan })
+  } catch (err) {
+    console.error('openAfterOp: failed to refresh folder', err)
+  }
+}
+
+// Re-scan without changing the current mode/selection semantics (used when
+// renaming a grid tile — we stay in the grid).
+async function rescanKeepingMode(): Promise<void> {
+  try {
+    const scan = await rescanCwd()
+    if (scan) useUiStore.setState({ scan })
+  } catch (err) {
+    console.error('rescanKeepingMode: failed to refresh folder', err)
+  }
+}
+
+// Re-scan after the target model left the folder (move/delete). In the viewer,
+// advance to the model now occupying the slot (or back to the grid if the
+// folder is empty); in the grid, just refresh the list.
+async function rescanAfterRemoval(): Promise<void> {
+  try {
+    const before = useUiStore.getState()
+    const scan = await rescanCwd()
+    if (!scan) return
+    if (before.mode !== 'viewer') {
+      useUiStore.setState({ scan })
+      return
+    }
+    if (scan.files.length === 0) {
+      useUiStore.setState({ scan, selectedIndex: null, mode: 'grid' })
+      return
+    }
+    const prev = before.selectedIndex ?? 0
+    useUiStore.setState({ scan, selectedIndex: Math.min(prev, scan.files.length - 1) })
+  } catch (err) {
+    console.error('rescanAfterRemoval: failed to refresh folder', err)
+  }
+}
