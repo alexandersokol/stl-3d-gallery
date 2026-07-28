@@ -19,5 +19,8 @@ mac:
   icon: build/icon.png
 
 win:
-  target: nsis
+  target:
+    - portable # single-file, no-install portable .exe
+    - msi # Windows installer (.msi)
+    - nsis # NSIS setup installer (.exe)
   icon: build/icon.png
