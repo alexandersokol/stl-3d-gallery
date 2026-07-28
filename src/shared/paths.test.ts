@@ -1,6 +1,6 @@
 import path from 'path'
 import { describe, it, expect } from 'vitest'
-import { metaPath, thumbPath, linkedPath, HIDDEN_DIRS } from './paths'
+import { metaPath, linkedPath, HIDDEN_DIRS } from './paths'
 
 describe('paths', () => {
   const m = path.join('/prints', 'dragons', '123.stl')
@@ -9,9 +9,6 @@ describe('paths', () => {
 
   it('maps metadata', () =>
     expect(metaPath(m)).toBe(path.join(dir, '.meta', base + '.json')))
-
-  it('maps thumbnail', () =>
-    expect(thumbPath(m)).toBe(path.join(dir, '.thumb', base + '.png')))
 
   it('maps linked image with ext', () =>
     expect(linkedPath(m, 'png')).toBe(path.join(dir, '.linked', base + '.png')))

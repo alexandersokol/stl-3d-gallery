@@ -120,7 +120,7 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
 
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(DEFAULT_BASE_COLOR),
-    roughness: 0.85,
+    roughness: 0.9, // keep in sync with the viewer's matte preset (materials.ts)
     metalness: 0.0,
   })
 

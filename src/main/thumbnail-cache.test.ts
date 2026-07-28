@@ -48,4 +48,29 @@ describe('thumbnail-cache', () => {
     const currentPath = path.join(thumbDir, `x.stl.v${THUMB_RENDER_VERSION}.png`)
     expect((await fs.readFile(currentPath)).toString()).toBe('NEWPNG')
   })
+  it('removes a pre-versioning legacy unversioned thumbnail on write', async () => {
+    const thumbDir = path.join(dir, '.thumb')
+    await fs.mkdir(thumbDir, { recursive: true })
+    const legacyPath = path.join(thumbDir, 'x.stl.png')
+    await fs.writeFile(legacyPath, 'LEGACYPNG')
+
+    // A sibling model's legacy thumbnail must survive untouched -- the
+    // cleanup is scoped to this model's basename only.
+    const otherModel = path.join(dir, 'other.stl')
+    await fs.writeFile(otherModel, 'model')
+    const otherLegacyPath = path.join(thumbDir, 'other.stl.png')
+    await fs.writeFile(otherLegacyPath, 'OTHERLEGACYPNG')
+
+    await writeThumbnail(model, Buffer.from('NEWPNG'))
+
+    // Legacy unversioned file for this model is gone.
+    await expect(fs.stat(legacyPath)).rejects.toMatchObject({ code: 'ENOENT' })
+
+    // Versioned file exists.
+    const currentPath = path.join(thumbDir, `x.stl.v${THUMB_RENDER_VERSION}.png`)
+    expect((await fs.readFile(currentPath)).toString()).toBe('NEWPNG')
+
+    // Other model's legacy file was not touched.
+    expect((await fs.readFile(otherLegacyPath)).toString()).toBe('OTHERLEGACYPNG')
+  })
 })

@@ -9,5 +9,4 @@ const sib = (modelPath: string, dir: string, suffix: string) => {
 }
 
 export const metaPath = (m: string) => sib(m, '.meta', '.json')
-export const thumbPath = (m: string) => sib(m, '.thumb', '.png')
 export const linkedPath = (m: string, ext: string) => sib(m, '.linked', '.' + ext)

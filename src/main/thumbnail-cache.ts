@@ -26,6 +26,7 @@ export async function writeThumbnail(modelPath: string, png: Buffer): Promise<vo
   await fs.mkdir(dir, { recursive: true })
   await fs.writeFile(tp, png)
   await removeOtherVersions(modelPath, dir)
+  await removeLegacyUnversioned(modelPath, dir)
 }
 
 async function removeOtherVersions(modelPath: string, dir: string): Promise<void> {
@@ -44,4 +45,16 @@ async function removeOtherVersions(modelPath: string, dir: string): Promise<void
       .filter((name) => name.startsWith(prefix) && name.endsWith('.png') && name !== currentName)
       .map((name) => fs.rm(path.join(dir, name), { force: true }))
   )
+}
+
+// Before THUMB_RENDER_VERSION existed, thumbnails were written unversioned
+// as `<basename>.png` (e.g. `girl.stl.png`), sitting alongside the model's
+// versioned `<basename>.vN.png` file rather than being matched/removed by
+// removeOtherVersions' `<basename>.v*` glob. Left alone these orphans
+// accumulate forever across upgrades. Remove this model's legacy file (if
+// any) whenever a fresh versioned thumbnail is written for it -- scoped to
+// this exact basename so other models' files are untouched.
+async function removeLegacyUnversioned(modelPath: string, dir: string): Promise<void> {
+  const legacyPath = path.join(dir, `${path.basename(modelPath)}.png`)
+  await fs.rm(legacyPath, { force: true })
 }
