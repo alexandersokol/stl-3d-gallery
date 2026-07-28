@@ -22,6 +22,9 @@ playwright-report/
 # Visual-brainstorm scratch (superpowers companion)
 .superpowers/
 
+# Local sample models (not part of the repo)
+test-models/
+
 # OS / editor
 .DS_Store
 *.log
