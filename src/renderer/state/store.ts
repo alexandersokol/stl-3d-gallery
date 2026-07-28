@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Metadata, ModelStats, ScanResult } from '../../shared/types'
 import { api } from '../ipc/api'
-import { DEFAULT_BASE_COLOR, type MaterialPreset } from '../viewer/materials'
+import { DEFAULT_BASE_COLOR, MATERIAL_PRESETS, type MaterialPreset } from '../viewer/materials'
 import type { LightPreset } from '../viewer/lighting'
 import { UI_THEME_STORAGE_KEY, readStoredUiTheme, type UiTheme } from '../theme'
 
@@ -16,6 +16,22 @@ export type Mode = 'grid' | 'viewer'
 // stamps documentElement[data-theme] before first paint) -- they must stay
 // in lockstep, hence the shared helper rather than a second copy here.
 
+// Persists the configured thumbnail-rendering material preset (separate
+// from `material`, which is the live 3D-preview material) across restarts,
+// the same way `uiTheme` is persisted above. A future Settings screen will
+// expose a picker for this; this store field/default is the plumbing it
+// will drive.
+const THUMBNAIL_PRESET_STORAGE_KEY = 'stl-gallery:thumbnailPreset'
+
+function readStoredThumbnailPreset(): MaterialPreset {
+  try {
+    const stored = localStorage.getItem(THUMBNAIL_PRESET_STORAGE_KEY)
+    return stored && (MATERIAL_PRESETS as string[]).includes(stored) ? (stored as MaterialPreset) : 'clay'
+  } catch {
+    return 'clay'
+  }
+}
+
 export interface UiState {
   cwd: string | null
   scan: ScanResult | null
@@ -28,6 +44,11 @@ export interface UiState {
   activeTags: string[]
   includeSubfolders: boolean
   material: MaterialPreset
+  // Material preset used when rendering grid thumbnails -- independent of
+  // `material` above (the live 3D-preview material). Defaults to 'clay' and
+  // persists to localStorage; a future Settings screen will expose a picker
+  // for it.
+  thumbnailPreset: MaterialPreset
   lighting: LightPreset
   lightIntensity: number
   baseColor: string
@@ -58,6 +79,7 @@ export interface UiState {
   toggleTag(t: string): void
   setIncludeSubfolders(b: boolean): void
   setMaterial(preset: MaterialPreset): void
+  setThumbnailPreset(preset: MaterialPreset): void
   setLighting(preset: LightPreset): void
   setLightIntensity(n: number): void
   setBaseColor(s: string): void
@@ -81,6 +103,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   activeTags: [],
   includeSubfolders: false,
   material: 'clay',
+  thumbnailPreset: readStoredThumbnailPreset(),
   lighting: 'studio',
   lightIntensity: 1,
   baseColor: DEFAULT_BASE_COLOR,
@@ -148,6 +171,16 @@ export const useUiStore = create<UiState>((set, get) => ({
   })),
   setIncludeSubfolders: (b) => set({ includeSubfolders: b }),
   setMaterial: (preset) => set({ material: preset }),
+  setThumbnailPreset: (preset) =>
+    set(() => {
+      try {
+        localStorage.setItem(THUMBNAIL_PRESET_STORAGE_KEY, preset)
+      } catch {
+        // Storage may be unavailable -- the choice still applies for the
+        // current session, it just won't survive a restart.
+      }
+      return { thumbnailPreset: preset }
+    }),
   setLighting: (preset) => set({ lighting: preset }),
   setLightIntensity: (n) => set({ lightIntensity: n }),
   setBaseColor: (s) => set({ baseColor: s }),

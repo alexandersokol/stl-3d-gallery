@@ -34,6 +34,7 @@ describe('useUiStore', () => {
     expect(s.activeTags).toEqual([])
     expect(s.includeSubfolders).toBe(false)
     expect(s.material).toBe('clay')
+    expect(s.thumbnailPreset).toBe('clay')
     expect(s.lighting).toBe('studio')
     expect(s.lightIntensity).toBe(1)
     expect(s.baseColor).toBe(DEFAULT_BASE_COLOR)
@@ -137,6 +138,18 @@ describe('useUiStore', () => {
 
     useUiStore.getState().setLighting('dramatic')
     expect(useUiStore.getState().lighting).toBe('dramatic')
+  })
+
+  it('setThumbnailPreset defaults to clay, updates the field, and persists the choice to localStorage', () => {
+    expect(useUiStore.getState().thumbnailPreset).toBe('clay')
+
+    useUiStore.getState().setThumbnailPreset('ceramic')
+    expect(useUiStore.getState().thumbnailPreset).toBe('ceramic')
+    expect(localStorage.getItem('stl-gallery:thumbnailPreset')).toBe('ceramic')
+
+    useUiStore.getState().setThumbnailPreset('clay')
+    expect(useUiStore.getState().thumbnailPreset).toBe('clay')
+    expect(localStorage.getItem('stl-gallery:thumbnailPreset')).toBe('clay')
   })
 
   it('setLightIntensity, setBaseColor, setBackground behave as simple setters', () => {

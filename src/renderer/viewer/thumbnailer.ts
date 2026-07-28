@@ -11,7 +11,8 @@
 
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
-import { DEFAULT_BASE_COLOR } from './materials'
+import { DEFAULT_BASE_COLOR, makeMaterial, type MaterialPreset } from './materials'
+import { makeMatcaps } from './matcaps'
 
 const DEFAULT_SIZE = 256
 const BACKGROUND_FILL_FRACTION = 0.85 // model should fill ~85% of the frame
@@ -24,6 +25,10 @@ interface RendererState {
   envMap: THREE.Texture
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
+  // Built once and reused across calls -- the 'ceramic' preset needs a
+  // matcap texture, and generating one involves a throwaway <canvas> 2D
+  // draw (see matcaps.ts) that's wasteful to repeat on every thumbnail.
+  matcaps: Record<'clay' | 'ceramic', THREE.Texture>
 }
 
 let state: RendererState | null = null
@@ -76,7 +81,9 @@ function getState(): RendererState {
   // opened in the viewer.
   camera.up.set(0, 0, 1)
 
-  state = { renderer, canvas, envMap, scene, camera }
+  const matcaps = makeMatcaps()
+
+  state = { renderer, canvas, envMap, scene, camera, matcaps }
   return state
 }
 
@@ -95,7 +102,8 @@ function toBlob(canvas: RenderTarget): Promise<Blob> {
 /**
  * Renders raw triangle-soup vertex positions (as produced by loadModel) to a
  * square, transparent-background PNG thumbnail on a shared offscreen
- * WebGL context.
+ * WebGL context, using the given material preset (independent of whatever
+ * material the live 3D preview happens to be using).
  *
  * The actual render body (doRenderThumbnail) mutates module-level shared
  * state (scene/camera/canvas) and awaits an async toBlob() call partway
@@ -107,8 +115,12 @@ function toBlob(canvas: RenderTarget): Promise<Blob> {
  * waits for the previous one to fully settle (including its async toBlob)
  * before starting.
  */
-async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): Promise<Blob> {
-  const { renderer, canvas, scene, camera } = getState()
+async function doRenderThumbnail(
+  positions: Float32Array,
+  preset: MaterialPreset,
+  size = DEFAULT_SIZE,
+): Promise<Blob> {
+  const { renderer, canvas, scene, camera, matcaps } = getState()
 
   renderer.setSize(size, size, false)
   camera.aspect = 1
@@ -118,11 +130,12 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
   geometry.computeVertexNormals()
   geometry.computeBoundingSphere()
 
-  const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(DEFAULT_BASE_COLOR),
-    roughness: 0.9, // keep in sync with the viewer's matte preset (materials.ts)
-    metalness: 0.0,
-  })
+  // Same material factory the live viewer uses (materials.ts), so a
+  // thumbnail rendered with a given preset matches what that preset looks
+  // like in the viewer. `normals`/`wireframe` don't respond to the scene's
+  // lighting/env at all -- that's fine, the lighting rig below is simply
+  // ignored by those materials.
+  const material = makeMaterial(preset, DEFAULT_BASE_COLOR, matcaps)
 
   const mesh = new THREE.Mesh(geometry, material)
   scene.add(mesh)
@@ -165,8 +178,12 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
 // doc comment above for why this is necessary.
 let renderQueue: Promise<unknown> = Promise.resolve()
 
-export function renderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): Promise<Blob> {
-  const result = renderQueue.then(() => doRenderThumbnail(positions, size))
+export function renderThumbnail(
+  positions: Float32Array,
+  preset: MaterialPreset,
+  size = DEFAULT_SIZE,
+): Promise<Blob> {
+  const result = renderQueue.then(() => doRenderThumbnail(positions, preset, size))
   // Keep the chain alive even if a render rejects, so one failure doesn't
   // wedge the queue for subsequent calls. The returned `result` promise
   // still rejects to the caller.

@@ -9,9 +9,17 @@ import { thumbnailLimiter } from '../lib/concurrency'
 export default function ModelTile({ file }: { file: FileEntry }) {
   const select = useUiStore((s) => s.select)
   const scan = useUiStore((s) => s.scan)
+  const thumbnailPreset = useUiStore((s) => s.thumbnailPreset)
 
   const tileRef = useRef<HTMLButtonElement | null>(null)
   const [thumbUrl, setThumbUrl] = useState<string | null>(null)
+
+  // Read via a ref (rather than closing over `thumbnailPreset` directly) so
+  // that `load()` -- which may run long after mount, once the tile actually
+  // scrolls into view -- always uses the CURRENT store value at that
+  // moment, not whatever it was when the effect below was created.
+  const thumbnailPresetRef = useRef(thumbnailPreset)
+  thumbnailPresetRef.current = thumbnailPreset
 
   const handleClick = () => {
     // Selection must be indexed against the FULL scan.files array (not the
@@ -38,14 +46,15 @@ export default function ModelTile({ file }: { file: FileEntry }) {
       if (started) return
       started = true
       try {
-        const cached = await api.readThumbnail(file.path)
+        const preset = thumbnailPresetRef.current
+        const cached = await api.readThumbnail(file.path, preset)
         const blob = cached
           ? new Blob([cached], { type: 'image/png' })
           : await thumbnailLimiter(async () => {
               const bytes = await api.readFileBytes(file.path)
               const { positions } = await loadModel(bytes)
-              const rendered = await renderThumbnail(positions)
-              await api.writeThumbnail(file.path, await rendered.arrayBuffer())
+              const rendered = await renderThumbnail(positions, preset)
+              await api.writeThumbnail(file.path, preset, await rendered.arrayBuffer())
               return rendered
             })
 
