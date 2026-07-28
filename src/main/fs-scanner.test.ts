@@ -53,18 +53,25 @@ describe('scanTree', () => {
   it('rejects when the top-level dir does not exist', async () => {
     await expect(scanTree('/nonexistent/definitely-not-here')).rejects.toThrow()
   })
-  it('skips unreadable subdirectories without failing the whole walk', async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'scantree-unreadable-'))
-    await fs.writeFile(path.join(dir, 'x.stl'), 'x')
-    const bad = path.join(dir, 'bad')
-    await fs.mkdir(bad)
-    await fs.writeFile(path.join(bad, 'y.stl'), 'y')
-    await fs.chmod(bad, 0o000)
-    try {
-      const files = await scanTree(dir)
-      expect(files.map(f => f.name)).toEqual(['x.stl'])
-    } finally {
-      await fs.chmod(bad, 0o755)
-    }
-  })
+  // POSIX-only: this simulates an unreadable directory with `chmod 0o000`,
+  // which Windows doesn't honor (the dir stays readable there), so the walk
+  // would still descend into it. Skip on Windows -- the behavior under test is
+  // a POSIX permission error path.
+  it.skipIf(process.platform === 'win32')(
+    'skips unreadable subdirectories without failing the whole walk',
+    async () => {
+      const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'scantree-unreadable-'))
+      await fs.writeFile(path.join(dir, 'x.stl'), 'x')
+      const bad = path.join(dir, 'bad')
+      await fs.mkdir(bad)
+      await fs.writeFile(path.join(bad, 'y.stl'), 'y')
+      await fs.chmod(bad, 0o000)
+      try {
+        const files = await scanTree(dir)
+        expect(files.map((f) => f.name)).toEqual(['x.stl'])
+      } finally {
+        await fs.chmod(bad, 0o755)
+      }
+    },
+  )
 })
