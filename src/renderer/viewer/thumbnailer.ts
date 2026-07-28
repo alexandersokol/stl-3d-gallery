@@ -143,8 +143,11 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
     const distanceForFit = radius / (Math.sin(vFov / 2) * BACKGROUND_FILL_FRACTION)
 
     camera.position.copy(center).addScaledVector(dir, distanceForFit)
-    camera.near = Math.max(distanceForFit - radius * 2, 0.01)
-    camera.far = distanceForFit + radius * 2
+    // Wrap near/far tightly around the framed model (single static shot, so
+    // this only needs to be set once here, not per-frame like the live
+    // viewer) so the thumbnail never clips the model at either plane.
+    camera.near = Math.max(distanceForFit - radius * 1.1, radius * 0.002)
+    camera.far = distanceForFit + radius * 1.5
     camera.lookAt(center)
     camera.updateProjectionMatrix()
 

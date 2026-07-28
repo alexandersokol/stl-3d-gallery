@@ -78,6 +78,17 @@ export class SceneManager {
   private lightIntensity = 1
   private gridOn = false
 
+  // Bounding-sphere radius of the currently loaded model, used every frame
+  // to keep the camera's near/far clip planes tight around the model (see
+  // animate()) and to size OrbitControls' min/maxDistance for the current
+  // camera-navigation mode (see applyCameraMode()). Null until a model has
+  // been loaded; the render loop and applyCameraMode() fall back to 1.
+  private modelRadius: number | null = null
+  // 'fly' (default): dolly all the way to/through the surface, for
+  // fly-through/interior inspection. 'surface': stop just outside the
+  // surface. Driven later by a Settings screen via setCameraMode().
+  private cameraMode: 'fly' | 'surface' = 'fly'
+
   private rafId: number | null = null
   private disposed = false
 
@@ -123,6 +134,7 @@ export class SceneManager {
     this.controls = new OrbitControls(this.camera, canvas)
     this.controls.enableDamping = true
     this.controls.target.set(0, 0, 0)
+    this.applyCameraMode()
     this.controls.update()
 
     // Corner axis gizmo (Blender/Tripo-style): shows X/Y/Z and animates the
@@ -178,6 +190,21 @@ export class SceneManager {
     const delta = this.clock.getDelta()
     if (this.viewHelper.animating) this.viewHelper.update(delta)
     this.controls.update()
+
+    // Keep the clip planes tight around the model at the CURRENT zoom
+    // distance every frame, rather than relying on the fixed near/far set
+    // once at fit time. A fixed far plane clips the model when zooming out
+    // past it; a fixed near plane slices into the model (visible interior
+    // cross-sections) when zooming/dollying in past it. Recomputing from
+    // the live camera-to-target distance each frame guarantees the whole
+    // model stays between the planes at any zoom level, including dollying
+    // up to/through the surface in 'fly' mode.
+    const dist = this.camera.position.distanceTo(this.controls.target)
+    const r = this.modelRadius || 1
+    this.camera.near = Math.max(dist - r * 1.1, r * 0.002)
+    this.camera.far = dist + r * 1.5
+    this.camera.updateProjectionMatrix()
+
     this.renderer.render(this.scene, this.camera)
 
     // ViewHelper draws itself as a second pass over the main render, using
@@ -204,6 +231,9 @@ export class SceneManager {
     geometry.computeVertexNormals()
     geometry.computeBoundingSphere()
 
+    this.modelRadius =
+      geometry.boundingSphere && geometry.boundingSphere.radius > 0 ? geometry.boundingSphere.radius : 1
+
     const material = makeMaterial(this.materialPreset, this.baseColor, this.matcaps)
     const mesh = new THREE.Mesh(geometry, material)
     this.scene.add(mesh)
@@ -220,6 +250,27 @@ export class SceneManager {
     this.scene.add(this.gridHelper)
 
     fitCameraToObject(this.camera, mesh, this.controls)
+    // Model radius changed (new model), so re-derive min/maxDistance for
+    // the current camera-navigation mode against the new size.
+    this.applyCameraMode()
+  }
+
+  /**
+   * Sets the camera-navigation mode that a future Settings screen will
+   * drive: 'fly' allows dollying all the way to/through the model surface
+   * (fly-through / interior inspection), while 'surface' stops the camera
+   * just outside the surface (classic zoom-to-surface behavior). Dynamic
+   * near/far (see animate()) means neither mode ever clips the model.
+   */
+  setCameraMode(mode: 'fly' | 'surface'): void {
+    this.cameraMode = mode
+    this.applyCameraMode()
+  }
+
+  private applyCameraMode(): void {
+    const r = this.modelRadius || 1
+    this.controls.minDistance = this.cameraMode === 'fly' ? r * 0.01 : r * 1.05
+    this.controls.maxDistance = r * 50
   }
 
   setMaterial(preset: MaterialPreset, baseColor: string): void {
