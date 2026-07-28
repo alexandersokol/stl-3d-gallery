@@ -12,6 +12,7 @@ import ViewerToolbar from './components/ViewerToolbar'
 import Filmstrip from './components/Filmstrip'
 import InfoPanel from './components/InfoPanel'
 import SettingsModal from './components/SettingsModal'
+import FileActionDialogs from './components/FileActionDialogs'
 import {
   GridViewIcon,
   ViewInArIcon,
@@ -30,6 +31,14 @@ function isTypingTarget(target: EventTarget | null): boolean {
   if (target.isContentEditable) return true
   const tag = target.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+}
+
+// The model currently open in the viewer, or null. Used by the F2/Delete
+// shortcuts to target the right file.
+function currentViewerFile(state: ReturnType<typeof useUiStore.getState>) {
+  const { scan, selectedIndex } = state
+  if (scan === null || selectedIndex === null) return null
+  return scan.files[selectedIndex] ?? null
 }
 
 export default function App() {
@@ -86,6 +95,23 @@ export default function App() {
         case 'I':
           state.toggleInfo()
           break
+        // File ops on the current viewer model. Guard on a model being open
+        // and no file dialog already up, so the key can't re-trigger while a
+        // dialog is showing. 'Backspace' is accepted too since it's the key
+        // labelled "delete" on Mac keyboards.
+        case 'F2': {
+          if (state.mode !== 'viewer' || state.fileAction) break
+          const f = currentViewerFile(state)
+          if (f) state.beginFileAction('rename', f.path)
+          break
+        }
+        case 'Delete':
+        case 'Backspace': {
+          if (state.mode !== 'viewer' || state.fileAction) break
+          const f = currentViewerFile(state)
+          if (f) state.beginFileAction('delete', f.path)
+          break
+        }
       }
     }
 
@@ -168,6 +194,7 @@ export default function App() {
       )}
 
       <SettingsModal />
+      <FileActionDialogs />
     </div>
   )
 }

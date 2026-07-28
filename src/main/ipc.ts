@@ -4,7 +4,9 @@ import { scanFolder, scanTree } from './fs-scanner'
 import { readMetadata, writeMetadata, readMetadataBatch } from './metadata-store'
 import { readThumbnail, writeThumbnail } from './thumbnail-cache'
 import { readLinkedImage, writeLinkedImage, removeLinkedImage } from './linked-image-store'
+import { renameModel, copyModel, moveModel, deleteModel } from './file-ops'
 import { appState } from './app-state'
+import path from 'path'
 import { parseStartupFolder } from './startup-args'
 import type { Metadata } from '../shared/types'
 
@@ -69,6 +71,30 @@ export function registerIpc(): void {
 
   ipcMain.handle('removeLinkedImage', async (_e, model: string) => {
     await removeLinkedImage(model)
+  })
+
+  ipcMain.handle('renameModel', async (_e, model: string, newName: string) => {
+    return renameModel(model, newName)
+  })
+
+  ipcMain.handle('copyModel', async (_e, model: string, newName: string) => {
+    return copyModel(model, newName)
+  })
+
+  // Opens a native folder picker (defaulting next to the model), then moves
+  // the model + sidecars there. Returns null if the user cancels.
+  ipcMain.handle('moveModel', async (_e, model: string) => {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      defaultPath: path.dirname(model),
+      title: 'Move model to folder',
+    })
+    if (canceled || filePaths.length === 0) return null
+    return moveModel(model, filePaths[0])
+  })
+
+  ipcMain.handle('deleteModel', async (_e, model: string) => {
+    await deleteModel(model)
   })
 
   ipcMain.handle('getLastFolder', async () => {

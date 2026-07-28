@@ -12,7 +12,14 @@ import { useUiStore } from '../state/store'
 import { api } from '../ipc/api'
 import TagEditor from './TagEditor'
 import ReferenceImage from './ReferenceImage'
-import { SellIcon, ImageIcon } from '../assets/icons'
+import {
+  SellIcon,
+  ImageIcon,
+  EditIcon,
+  ContentCopyIcon,
+  DriveFileMoveIcon,
+  DeleteIcon,
+} from '../assets/icons'
 
 const SAVE_DEBOUNCE_MS = 500
 
@@ -55,6 +62,8 @@ export default function InfoPanel() {
   const selectedIndex = useUiStore((s) => s.selectedIndex)
   const currentStats = useUiStore((s) => s.currentStats)
   const setMeta = useUiStore((s) => s.setMeta)
+  const beginFileAction = useUiStore((s) => s.beginFileAction)
+  const moveFile = useUiStore((s) => s.moveFile)
 
   const file = scan !== null && selectedIndex !== null ? (scan.files[selectedIndex] ?? null) : null
 
@@ -164,6 +173,44 @@ export default function InfoPanel() {
             <p className="info-panel-path" title={file.path}>
               {file.path}
             </p>
+            <div className="info-actions" role="group" aria-label="File actions">
+              <button
+                type="button"
+                className="info-action-btn"
+                aria-label="Rename"
+                title="Rename (F2)"
+                onClick={() => beginFileAction('rename', file.path)}
+              >
+                <EditIcon size={18} />
+              </button>
+              <button
+                type="button"
+                className="info-action-btn"
+                aria-label="Copy"
+                title="Copy"
+                onClick={() => beginFileAction('copy', file.path)}
+              >
+                <ContentCopyIcon size={18} />
+              </button>
+              <button
+                type="button"
+                className="info-action-btn"
+                aria-label="Move"
+                title="Move to folder…"
+                onClick={() => void moveFile(file.path)}
+              >
+                <DriveFileMoveIcon size={18} />
+              </button>
+              <button
+                type="button"
+                className="info-action-btn info-action-btn-danger"
+                aria-label="Delete"
+                title="Delete (Del)"
+                onClick={() => beginFileAction('delete', file.path)}
+              >
+                <DeleteIcon size={18} />
+              </button>
+            </div>
           </section>
 
           <section className="info-section">
