@@ -54,6 +54,11 @@ export class SceneManager {
     this.scene.background = new THREE.Color(BACKGROUND_DARK)
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000)
+    // STL files use the Z-up convention (Blender / 3D-printing); orient the
+    // camera's up-vector to +Z so OrbitControls orbits around a vertical Z
+    // axis and models stand upright instead of appearing tipped onto their
+    // back. See cameraControls.ts for the shared framing logic.
+    this.camera.up.set(0, 0, 1)
     this.camera.position.set(3, 3, 3)
     this.camera.lookAt(0, 0, 0)
 

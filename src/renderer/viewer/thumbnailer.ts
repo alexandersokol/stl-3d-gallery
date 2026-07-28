@@ -69,6 +69,11 @@ function getState(): RendererState {
   scene.add(key)
 
   const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100)
+  // STL files use the Z-up convention (Blender / 3D-printing). Match the
+  // live viewer's camera orientation (see cameraControls.ts) so a model's
+  // thumbnail shows it standing upright, the same way it appears when
+  // opened in the viewer.
+  camera.up.set(0, 0, 1)
 
   state = { renderer, canvas, envMap, scene, camera }
   return state
@@ -126,10 +131,13 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
     const center = sphere.center
     const radius = sphere.radius > 0 ? sphere.radius : 1
 
-    // Fixed pleasant 3/4 view: offset along +x/+y/+z from the model center,
-    // then pull back along that direction until the bounding sphere fits
-    // within BACKGROUND_FILL_FRACTION of the vertical frame.
-    const dir = new THREE.Vector3(1, 0.75, 1).normalize()
+    // Fixed pleasant 3/4 view in Z-up space (+X right, -Y toward the
+    // viewer/front, +Z up) — the SAME direction used by cameraControls.ts's
+    // fitCameraToObject, so a model's thumbnail matches its orientation in
+    // the live viewer. Offset along this direction from the model center,
+    // then pull back until the bounding sphere fits within
+    // BACKGROUND_FILL_FRACTION of the vertical frame.
+    const dir = new THREE.Vector3(1, -1, 0.75).normalize()
     const vFov = (camera.fov * Math.PI) / 180
     const distanceForFit = radius / (Math.sin(vFov / 2) * BACKGROUND_FILL_FRACTION)
 

@@ -1,17 +1,21 @@
 // Camera-framing helper shared by SceneManager.setModel() and resetCamera().
 //
-// Given an object (typically the currently-loaded model mesh), computes its
-// bounding sphere and positions the camera at a pleasant fixed 3/4 angle,
-// pulled back far enough that the sphere fills roughly `fill` of the
+// STL files (Blender / 3D-printing convention) use a Z-up coordinate system,
+// so this module frames objects for a Z-up world: the camera's up-vector is
+// set to +Z (so OrbitControls orbits around a vertical Z axis) and the
+// camera is placed at a pleasant fixed 3/4 angle in that space, pulled back
+// far enough that the object's bounding sphere fills roughly `fill` of the
 // vertical field of view. Orbit controls' target is re-centered on the
 // object so subsequent drag/orbit/zoom behaves correctly.
 
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
-// Fixed 3/4 view direction (up and to the right of center), matching the
-// pleasant default angle used by the offline thumbnailer.
-const VIEW_DIR = new THREE.Vector3(1, 0.75, 1).normalize()
+// Fixed 3/4 view direction in Z-up space: +X right, -Y toward the viewer
+// (front), +Z up. This is the SAME direction used by the offline
+// thumbnailer so a model's thumbnail matches its orientation in the live
+// viewer.
+const VIEW_DIR = new THREE.Vector3(1, -1, 0.75).normalize()
 
 /**
  * Frames `object` in `camera`'s view and points `controls` at it.
@@ -37,9 +41,11 @@ export function fitCameraToObject(
   const vFov = (camera.fov * Math.PI) / 180
   const distance = radius / (Math.sin(vFov / 2) * fill)
 
+  camera.up.set(0, 0, 1)
   camera.position.copy(center).addScaledVector(VIEW_DIR, distance)
   camera.near = Math.max(distance - radius * 2, 0.01)
   camera.far = distance + radius * 2
+  camera.lookAt(center)
   camera.updateProjectionMatrix()
 
   controls.target.copy(center)
