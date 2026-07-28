@@ -11,6 +11,7 @@
 
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { DEFAULT_BASE_COLOR } from './materials'
 
 const DEFAULT_SIZE = 256
 const BACKGROUND_FILL_FRACTION = 0.85 // model should fill ~85% of the frame
@@ -118,7 +119,7 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
   geometry.computeBoundingSphere()
 
   const material = new THREE.MeshStandardMaterial({
-    color: 0xb0b6be,
+    color: new THREE.Color(DEFAULT_BASE_COLOR),
     roughness: 0.85,
     metalness: 0.0,
   })

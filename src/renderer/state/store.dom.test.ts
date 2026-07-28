@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { FileEntry, Metadata, ModelStats, ScanResult } from '../../shared/types'
+import { DEFAULT_BASE_COLOR } from '../viewer/materials'
 
 const files: FileEntry[] = [
   { path: '/x/a.stl', name: 'a.stl', size: 1, mtimeMs: 1 },
@@ -35,7 +36,7 @@ describe('useUiStore', () => {
     expect(s.material).toBe('matte')
     expect(s.lighting).toBe('studio')
     expect(s.lightIntensity).toBe(1)
-    expect(s.baseColor).toBe('#b0b6be')
+    expect(s.baseColor).toBe(DEFAULT_BASE_COLOR)
     expect(s.background).toBe('dark')
     expect(s.showGrid).toBe(false)
     expect(s.autoRotate).toBe(false)

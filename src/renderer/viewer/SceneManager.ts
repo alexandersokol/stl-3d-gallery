@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { fitCameraToObject } from './cameraControls'
-import { makeMaterial, type MaterialPreset } from './materials'
+import { makeMaterial, DEFAULT_BASE_COLOR, type MaterialPreset } from './materials'
 import { makeLights, type LightPreset } from './lighting'
 import { makeMatcaps } from './matcaps'
 
@@ -33,7 +33,7 @@ export class SceneManager {
   private gridHelper: THREE.GridHelper | null = null
 
   private materialPreset: MaterialPreset = 'matte'
-  private baseColor = '#b0b6be'
+  private baseColor = DEFAULT_BASE_COLOR
   private lightPreset: LightPreset = 'studio'
   private lightIntensity = 1
   private gridOn = false

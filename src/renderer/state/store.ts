@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Metadata, ModelStats, ScanResult } from '../../shared/types'
 import { api } from '../ipc/api'
-import type { MaterialPreset } from '../viewer/materials'
+import { DEFAULT_BASE_COLOR, type MaterialPreset } from '../viewer/materials'
 import type { LightPreset } from '../viewer/lighting'
 
 export type Mode = 'grid' | 'viewer'
@@ -70,7 +70,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   material: 'matte',
   lighting: 'studio',
   lightIntensity: 1,
-  baseColor: '#b0b6be',
+  baseColor: DEFAULT_BASE_COLOR,
   background: 'dark',
   showGrid: false,
   autoRotate: false,

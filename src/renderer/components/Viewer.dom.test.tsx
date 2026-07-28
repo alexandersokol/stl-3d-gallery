@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor, act } from '@testing-library/react'
 import type { FileEntry, ModelStats, ScanResult } from '../../shared/types'
+import { DEFAULT_BASE_COLOR } from '../viewer/materials'
 
 const file: FileEntry = { path: '/root/a.stl', name: 'a.stl', size: 100, mtimeMs: 1 }
 const scanResult: ScanResult = { folders: [], files: [file] }
@@ -87,7 +88,7 @@ describe('<Viewer/>', () => {
     const sm = MockSceneManager.instances[0]
     await waitFor(() => expect(sm.setModel).toHaveBeenCalled())
 
-    expect(sm.setMaterial).toHaveBeenCalledWith('matte', '#b0b6be')
+    expect(sm.setMaterial).toHaveBeenCalledWith('matte', DEFAULT_BASE_COLOR)
     expect(sm.setLighting).toHaveBeenCalledWith('studio', 1)
     expect(sm.setBackground).toHaveBeenCalledWith('dark')
     expect(sm.setGrid).toHaveBeenCalledWith(false)
@@ -103,7 +104,7 @@ describe('<Viewer/>', () => {
     act(() => {
       useUiStore.getState().setMaterial('metal')
     })
-    await waitFor(() => expect(sm.setMaterial).toHaveBeenCalledWith('metal', '#b0b6be'))
+    await waitFor(() => expect(sm.setMaterial).toHaveBeenCalledWith('metal', DEFAULT_BASE_COLOR))
 
     act(() => {
       useUiStore.getState().setBaseColor('#ff0000')
