@@ -6,6 +6,7 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import { fitCameraToObject } from './cameraControls'
 import { makeMaterial, DEFAULT_BASE_COLOR, type MaterialPreset } from './materials'
 import { makeLights, type LightPreset } from './lighting'
@@ -59,6 +60,8 @@ export class SceneManager {
   private readonly scene: THREE.Scene
   private readonly camera: THREE.PerspectiveCamera
   private readonly controls: OrbitControls
+  private readonly viewHelper: ViewHelper
+  private readonly clock: THREE.Clock
   private readonly envMap: THREE.Texture
   private readonly matcaps: { clay: THREE.Texture; ceramic: THREE.Texture }
   private readonly backgroundTextures: { dark: THREE.CanvasTexture; light: THREE.CanvasTexture }
@@ -122,6 +125,14 @@ export class SceneManager {
     this.controls.target.set(0, 0, 0)
     this.controls.update()
 
+    // Corner axis gizmo (Blender/Tripo-style): shows X/Y/Z and animates the
+    // camera to look down an axis when clicked. It reads camera.up, so with
+    // up=+Z (see above) it renders Z pointing up, matching the scene.
+    this.viewHelper = new ViewHelper(this.camera, this.renderer.domElement)
+    this.viewHelper.center = this.controls.target
+    this.clock = new THREE.Clock()
+    this.renderer.domElement.addEventListener('pointerup', this.handleViewHelperPointerUp)
+
     this.lights = makeLights(this.lightPreset, this.lightIntensity)
     for (const light of this.lights) this.scene.add(light)
 
@@ -131,10 +142,15 @@ export class SceneManager {
     this.animate()
   }
 
-  private buildGridHelper(radius: number, y: number): THREE.GridHelper {
+  private buildGridHelper(radius: number, z: number): THREE.GridHelper {
     const size = Math.max(radius * 4, 2)
     const helper = new THREE.GridHelper(size, GRID_DIVISIONS)
-    helper.position.y = y
+    // GridHelper is built flat in the XZ plane (Y-up ground) by default.
+    // The scene is Z-up (see camera.up above), so the "ground" is the XY
+    // plane -- rotate +90 deg about X to lay the grid flat there, then seat
+    // it at the model's base (min Z) so it reads as a floor under the model.
+    helper.rotation.x = Math.PI / 2
+    helper.position.z = z
     helper.visible = this.gridOn
     return helper
   }
@@ -159,8 +175,25 @@ export class SceneManager {
 
   private animate = (): void => {
     this.rafId = requestAnimationFrame(this.animate)
+    const delta = this.clock.getDelta()
+    if (this.viewHelper.animating) this.viewHelper.update(delta)
     this.controls.update()
     this.renderer.render(this.scene, this.camera)
+
+    // ViewHelper draws itself as a second pass over the main render, using
+    // its own small viewport in the corner; autoClear must be off so it
+    // doesn't wipe the scene that was just rendered above.
+    this.renderer.autoClear = false
+    this.viewHelper.render(this.renderer)
+    this.renderer.autoClear = true
+  }
+
+  // If the gizmo consumed the click it starts animating the camera itself;
+  // there is nothing further for us to do. Clicks outside the gizmo's small
+  // corner viewport fall through untouched, so OrbitControls dragging is
+  // unaffected.
+  private handleViewHelperPointerUp = (event: PointerEvent): void => {
+    this.viewHelper.handleClick(event)
   }
 
   setModel(positions: Float32Array): void {
@@ -183,7 +216,7 @@ export class SceneManager {
     const sphere = box.isEmpty() ? new THREE.Sphere(new THREE.Vector3(), 1) : box.getBoundingSphere(new THREE.Sphere())
 
     this.disposeGridHelper()
-    this.gridHelper = this.buildGridHelper(sphere.radius, box.isEmpty() ? 0 : box.min.y)
+    this.gridHelper = this.buildGridHelper(sphere.radius, box.isEmpty() ? 0 : box.min.z)
     this.scene.add(this.gridHelper)
 
     fitCameraToObject(this.camera, mesh, this.controls)
@@ -247,6 +280,9 @@ export class SceneManager {
     this.disposed = true
 
     if (this.rafId != null) cancelAnimationFrame(this.rafId)
+
+    this.renderer.domElement.removeEventListener('pointerup', this.handleViewHelperPointerUp)
+    this.viewHelper.dispose()
 
     this.disposeCurrentMesh()
 
