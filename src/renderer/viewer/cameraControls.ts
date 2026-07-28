@@ -1,0 +1,47 @@
+// Camera-framing helper shared by SceneManager.setModel() and resetCamera().
+//
+// Given an object (typically the currently-loaded model mesh), computes its
+// bounding sphere and positions the camera at a pleasant fixed 3/4 angle,
+// pulled back far enough that the sphere fills roughly `fill` of the
+// vertical field of view. Orbit controls' target is re-centered on the
+// object so subsequent drag/orbit/zoom behaves correctly.
+
+import * as THREE from 'three'
+import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+
+// Fixed 3/4 view direction (up and to the right of center), matching the
+// pleasant default angle used by the offline thumbnailer.
+const VIEW_DIR = new THREE.Vector3(1, 0.75, 1).normalize()
+
+/**
+ * Frames `object` in `camera`'s view and points `controls` at it.
+ *
+ * @param fill fraction (0-1) of the vertical frame the object's bounding
+ *   sphere should fill; defaults to 0.8 (a little breathing room around the
+ *   model).
+ */
+export function fitCameraToObject(
+  camera: THREE.PerspectiveCamera,
+  object: THREE.Object3D,
+  controls: OrbitControls,
+  fill = 0.8,
+): void {
+  const box = new THREE.Box3().setFromObject(object)
+
+  // Guard against an empty/degenerate object (no geometry yet): fall back to
+  // a unit sphere at the origin rather than producing NaNs.
+  const sphere = box.isEmpty() ? new THREE.Sphere(new THREE.Vector3(), 1) : box.getBoundingSphere(new THREE.Sphere())
+  const center = sphere.center
+  const radius = sphere.radius > 0 ? sphere.radius : 1
+
+  const vFov = (camera.fov * Math.PI) / 180
+  const distance = radius / (Math.sin(vFov / 2) * fill)
+
+  camera.position.copy(center).addScaledVector(VIEW_DIR, distance)
+  camera.near = Math.max(distance - radius * 2, 0.01)
+  camera.far = distance + radius * 2
+  camera.updateProjectionMatrix()
+
+  controls.target.copy(center)
+  controls.update()
+}

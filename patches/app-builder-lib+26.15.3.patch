@@ -1,0 +1,38 @@
+diff --git a/node_modules/app-builder-lib/out/targets/blockmap/blockmap.js b/node_modules/app-builder-lib/out/targets/blockmap/blockmap.js
+index 2492bc7..a181e19 100644
+--- a/node_modules/app-builder-lib/out/targets/blockmap/blockmap.js
++++ b/node_modules/app-builder-lib/out/targets/blockmap/blockmap.js
+@@ -5,7 +5,12 @@ const crypto_1 = require("crypto");
+ const fs_1 = require("fs");
+ const promises_1 = require("fs/promises");
+ const zlib = require("zlib");
+-const blake2_js_1 = require("@noble/hashes/blake2.js");
++// @noble/hashes v2 ships pure ESM with no CJS export condition, so a plain
++// require() throws ERR_REQUIRE_ESM on Node versions without unflagged
++// require(esm) support. Load it lazily via dynamic import() instead (see
++// buildBlockMap below), which works from CommonJS on every supported Node
++// version.
++let blake2bPromise;
+ // Rabin fingerprinting constants from github.com/aclements/go-rabin:
+ //   Poly64 = 0xbfe6b8a5bf378d83 (degree-63 irreducible polynomial over GF(2))
+ //   Window = 64 bytes, Avg = 16 KB, Min = 8 KB, Max = 32 KB
+@@ -47,6 +52,10 @@ function compress(data, format) {
+  * Returned `sha512` is SHA-512 of the full file as it exists after the call.
+  */
+ async function buildBlockMap(inFile, compressionFormat, outFile) {
++    if (blake2bPromise === undefined) {
++        blake2bPromise = import("@noble/hashes/blake2.js");
++    }
++    const { blake2b } = await blake2bPromise;
+     const fileHash = (0, crypto_1.createHash)("sha512");
+     const checksums = [];
+     const sizes = [];
+@@ -59,7 +68,7 @@ async function buildBlockMap(inFile, compressionFormat, outFile) {
+     const win = new Uint8Array(RABIN_WINDOW); // rolling window ring buffer
+     let wpos = 0;
+     function emitChunk() {
+-        checksums.push(Buffer.from((0, blake2_js_1.blake2b)(chunkBuf.subarray(0, chunkN), { dkLen: 18 })).toString("base64"));
++        checksums.push(Buffer.from(blake2b(chunkBuf.subarray(0, chunkN), { dkLen: 18 })).toString("base64"));
+         sizes.push(chunkN);
+         chunkN = 0;
+         hi = 0;

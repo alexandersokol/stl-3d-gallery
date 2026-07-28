@@ -6,11 +6,18 @@ dist/
 dist-electron/
 out/
 release/
-build/
+build/*
+!build/icon.png
 .vite/
 
 # Test / coverage
 coverage/
+test-results/
+playwright-report/
+
+# TypeScript project references build cache
+.tsbuildcache/
+*.tsbuildinfo
 
 # Visual-brainstorm scratch (superpowers companion)
 .superpowers/
