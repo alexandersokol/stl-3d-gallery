@@ -5,6 +5,7 @@ import { readMetadata, writeMetadata, readMetadataBatch } from './metadata-store
 import { readThumbnail, writeThumbnail } from './thumbnail-cache'
 import { readLinkedImage, writeLinkedImage, removeLinkedImage } from './linked-image-store'
 import { appState } from './app-state'
+import { parseStartupFolder } from './startup-args'
 import type { Metadata } from '../shared/types'
 
 // Node Buffers share a pooled backing ArrayBuffer, so `buf.buffer` alone can
@@ -76,5 +77,13 @@ export function registerIpc(): void {
 
   ipcMain.handle('setLastFolder', async (_e, dir: string) => {
     await appState.setLastFolder(dir)
+  })
+
+  // Lets the E2E harness (Task 8.1) point a launched build at a fixture
+  // folder deterministically via `--folder <path>`, cross-platform, without
+  // relying on OS file-association plumbing. Absent in normal use, so this
+  // is a no-op (returns null) for real users.
+  ipcMain.handle('getStartupFolder', async () => {
+    return parseStartupFolder(process.argv)
   })
 }

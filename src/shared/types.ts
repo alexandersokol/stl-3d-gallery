@@ -20,4 +20,5 @@ export interface Api {
   getLastFolder(): Promise<string | null>
   setLastFolder(dir: string): Promise<void>
   onOpenFile(cb: (path: string) => void): void
+  getStartupFolder(): Promise<string | null>
 }

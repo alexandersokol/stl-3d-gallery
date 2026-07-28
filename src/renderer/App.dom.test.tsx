@@ -65,6 +65,9 @@ let openFileCallback: ((path: string) => void) | null = null
 const onOpenFile = vi.fn((cb: (path: string) => void) => {
   openFileCallback = cb
 })
+// getStartupFolder (Task 8.1) is the E2E-only "--folder" hook. Stubbed to
+// null by default so it's a no-op for all the existing App tests.
+const getStartupFolder = vi.fn()
 
 vi.mock('./ipc/api', () => ({
   api: {
@@ -80,6 +83,7 @@ vi.mock('./ipc/api', () => ({
     writeLinkedImage: (...args: unknown[]) => writeLinkedImage(...args),
     removeLinkedImage: (...args: unknown[]) => removeLinkedImage(...args),
     onOpenFile: (...args: [(path: string) => void]) => onOpenFile(...args),
+    getStartupFolder: (...args: unknown[]) => getStartupFolder(...args),
   },
 }))
 
@@ -150,6 +154,8 @@ beforeEach(() => {
   removeLinkedImage.mockReset()
   onOpenFile.mockClear()
   openFileCallback = null
+  getStartupFolder.mockReset()
+  getStartupFolder.mockResolvedValue(null)
   loadModel.mockReset()
   loadModel.mockResolvedValue({
     positions: new Float32Array(9),
@@ -453,5 +459,26 @@ describe('<App/> single-file open (Task 7.1)', () => {
     await waitFor(() => expect(useUiStore.getState().cwd).toBe('/root'))
     expect(useUiStore.getState().mode).toBe('grid')
     expect(useUiStore.getState().selectedIndex).toBeNull()
+  })
+})
+
+describe('<App/> startup folder (Task 8.1)', () => {
+  it('opens the folder returned by getStartupFolder on mount, in grid mode, without selecting anything', async () => {
+    getStartupFolder.mockResolvedValue('/root')
+    render(<App />)
+
+    await waitFor(() => expect(scanFolder).toHaveBeenCalledWith('/root'))
+    expect(useUiStore.getState().mode).toBe('grid')
+    expect(useUiStore.getState().selectedIndex).toBeNull()
+    expect(await screen.findByText('a.stl')).toBeTruthy()
+  })
+
+  it('does nothing when getStartupFolder resolves to null', async () => {
+    getStartupFolder.mockResolvedValue(null)
+    render(<App />)
+
+    await waitFor(() => expect(getStartupFolder).toHaveBeenCalled())
+    expect(scanFolder).not.toHaveBeenCalled()
+    expect(useUiStore.getState().cwd).toBeNull()
   })
 })

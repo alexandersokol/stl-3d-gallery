@@ -21,6 +21,7 @@ const api: Api = {
   getLastFolder: () => ipcRenderer.invoke('getLastFolder'),
   setLastFolder: (dir) => ipcRenderer.invoke('setLastFolder', dir),
   onOpenFile: (cb) => ipcRenderer.on('open-file', (_e, path: string) => cb(path)),
+  getStartupFolder: () => ipcRenderer.invoke('getStartupFolder'),
 }
 
 contextBridge.exposeInMainWorld('api', api)

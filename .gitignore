@@ -12,6 +12,8 @@ build/*
 
 # Test / coverage
 coverage/
+test-results/
+playwright-report/
 
 # TypeScript project references build cache
 .tsbuildcache/
