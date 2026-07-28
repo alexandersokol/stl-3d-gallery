@@ -2,7 +2,7 @@
 
 An offline desktop app to browse folders of STL files like an image gallery, preview each model in 3D, and tag/annotate them.
 
-> **Status:** Design phase. This wiki is the source of truth for what we're building and why. Implementation has not started.
+> **Status:** v1 implemented (branch `feat/v1-implementation`). All core features built, tested, and verified end-to-end (Playwright-Electron smoke passes with real WebGL rendering; a packaged macOS `.dmg` builds). Two items were consciously deferred to post-v1 follow-ups: the **include-subfolders** toggle (needs a selection/nav active-list refactor) and **grid DOM virtualization** (lazy, concurrency-bounded, cached thumbnails already deliver the performance win). This wiki remains the source of truth for the design.
 
 ## One-line pitch
 
