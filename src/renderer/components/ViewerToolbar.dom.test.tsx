@@ -13,15 +13,15 @@ describe('<ViewerToolbar/>', () => {
   it('clicking a material preset button calls setMaterial and marks it active', () => {
     render(<ViewerToolbar />)
 
-    // 'solidview' (label "Solid View") is the 3D-preview default material.
-    expect(screen.getByRole('button', { name: 'Solid View' })).toHaveAttribute('aria-pressed', 'true')
+    // 'studio' (label "Studio") is the 3D-preview default material.
+    expect(screen.getByRole('button', { name: 'Studio' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Metal' })).toHaveAttribute('aria-pressed', 'false')
 
     fireEvent.click(screen.getByRole('button', { name: 'Metal' }))
 
     expect(useUiStore.getState().material).toBe('metal')
     expect(screen.getByRole('button', { name: 'Metal' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Solid View' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Studio' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('renders the material presets in two groups split by a separator', () => {

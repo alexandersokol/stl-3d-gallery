@@ -89,7 +89,7 @@ describe('<Viewer/>', () => {
     const sm = MockSceneManager.instances[0]
     await waitFor(() => expect(sm.setModel).toHaveBeenCalled())
 
-    expect(sm.setMaterial).toHaveBeenCalledWith('solidview', DEFAULT_BASE_COLOR)
+    expect(sm.setMaterial).toHaveBeenCalledWith('studio', DEFAULT_BASE_COLOR)
     expect(sm.setLighting).toHaveBeenCalledWith('studio', 1)
     expect(sm.setBackground).toHaveBeenCalledWith('dark')
     expect(sm.setCameraMode).toHaveBeenCalledWith('fly')

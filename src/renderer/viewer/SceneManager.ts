@@ -77,8 +77,12 @@ export class SceneManager {
   private outlineMesh: THREE.Mesh | null = null
   private lights: THREE.Light[] = []
   private gridHelper: THREE.GridHelper | null = null
+  // Farthest distance from the camera target (model center) to a corner of the
+  // ground grid. The grid extends well past the model, so when it's visible the
+  // clip planes must open up to include it or its far/near rows get cut off.
+  private gridReach = 0
 
-  private materialPreset: MaterialPreset = 'solidview'
+  private materialPreset: MaterialPreset = 'studio'
   private baseColor = DEFAULT_BASE_COLOR
   private lightPreset: LightPreset = 'studio'
   private lightIntensity = 1
@@ -178,6 +182,17 @@ export class SceneManager {
     helper.rotation.x = Math.PI / 2
     helper.position.z = z
     helper.visible = this.gridOn
+
+    // Distance from the camera target (model center) to the farthest grid
+    // corner, so the clip planes can grow to contain the grid (see animate()).
+    // The grid is centered on X/Y at 0 and sits at z; the farthest corner is on
+    // the opposite side of the center from any model-center offset.
+    const half = size / 2
+    this.gridReach = Math.hypot(
+      half + Math.abs(this.modelCenter.x),
+      half + Math.abs(this.modelCenter.y),
+      this.modelCenter.z - z,
+    )
     return helper
   }
 
@@ -240,8 +255,13 @@ export class SceneManager {
     // up to/through the surface in 'fly' mode.
     const dist = this.camera.position.distanceTo(this.controls.target)
     const r = this.modelRadius || 1
-    this.camera.near = Math.max(dist - r * 1.1, r * 0.002)
-    this.camera.far = dist + r * 1.5
+    // When the grid is visible, open the clip planes to include its full extent
+    // (it reaches ~2.8x the model radius) so its near/far rows aren't cut off.
+    // When it's hidden, keep them tight around the model for best depth
+    // precision.
+    const reach = this.gridOn ? this.gridReach : 0
+    this.camera.near = Math.max(dist - Math.max(r * 1.1, reach), r * 0.002)
+    this.camera.far = dist + Math.max(r * 1.5, reach)
     this.camera.updateProjectionMatrix()
 
     this.renderer.render(this.scene, this.camera)
