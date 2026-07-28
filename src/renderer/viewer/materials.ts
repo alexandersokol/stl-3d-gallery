@@ -4,6 +4,7 @@
 // any individual preset.
 
 import * as THREE from 'three'
+import type { MatcapName } from './matcaps'
 
 export type MaterialPreset =
   | 'solidview'
@@ -15,6 +16,7 @@ export type MaterialPreset =
   | 'wireframe'
   | 'normals'
   | 'studio'
+  | 'comic'
 
 // The 3D-preview material picker shows presets in two groups separated by a
 // divider: the everyday "primary" set first (Solid View is the preview
@@ -22,7 +24,7 @@ export type MaterialPreset =
 // truth for both ordering and grouping; MATERIAL_PRESETS below is their
 // concatenation (the full list, in display order), used everywhere a flat
 // list is enough (e.g. the Settings thumbnail-preset dropdown).
-export const PRIMARY_MATERIAL_PRESETS: MaterialPreset[] = ['solidview', 'studio', 'normals', 'wireframe']
+export const PRIMARY_MATERIAL_PRESETS: MaterialPreset[] = ['solidview', 'studio', 'comic', 'normals', 'wireframe']
 export const SECONDARY_MATERIAL_PRESETS: MaterialPreset[] = ['clay', 'matte', 'glossy', 'metal', 'ceramic']
 
 export const MATERIAL_PRESETS: MaterialPreset[] = [...PRIMARY_MATERIAL_PRESETS, ...SECONDARY_MATERIAL_PRESETS]
@@ -32,6 +34,7 @@ export const MATERIAL_PRESETS: MaterialPreset[] = [...PRIMARY_MATERIAL_PRESETS, 
 export const MATERIAL_PRESET_LABELS: Record<MaterialPreset, string> = {
   solidview: 'Solid View',
   studio: 'Studio',
+  comic: 'Comic',
   normals: 'Normals',
   wireframe: 'Wireframe',
   clay: 'Clay',
@@ -43,7 +46,7 @@ export const MATERIAL_PRESET_LABELS: Record<MaterialPreset, string> = {
 
 // Single source of truth for the default model base color (a mid-dark neutral
 // grey clay). Applies to the lit presets (clay/matte/glossy/metal) and
-// wireframe; the matcap presets (solidview/studio/ceramic) and normals ignore
+// wireframe; the matcap presets (solidview/studio/ceramic/comic) and normals ignore
 // it. Consumed by the store's default `baseColor` and SceneManager's default
 // so the viewer and info panel start from the same color.
 export const DEFAULT_BASE_COLOR = '#7f8288'
@@ -58,14 +61,40 @@ export const DEFAULT_BASE_COLOR = '#7f8288'
  * (normals) instead.
  *
  * `matcaps` must contain pre-loaded textures for the matcap presets
- * (`solidview`, `studio`, `ceramic`); loading them is the caller's
+ * (`solidview`, `studio`, `ceramic`, `comic`); loading them is the caller's
  * responsibility (matcap loading touches the filesystem/network and doesn't
  * belong in a pure factory).
  */
+/**
+ * Builds the black "ink outline" material for the comic preset — an
+ * inverted-hull outline. It renders only BACK faces of a copy of the mesh
+ * whose vertices are pushed OUT along their normals by `thickness` (world
+ * units), so a slightly-larger black shell peeks out around the model's
+ * silhouette as a clean, uniform-width contour line. `thickness` should scale
+ * with the model size (e.g. bounding radius * ~0.02) so the line looks the
+ * same weight on large and small models.
+ *
+ * The push is done in the vertex shader via onBeforeCompile rather than a plain
+ * uniform mesh scale, so the outline width is even all around regardless of
+ * where the geometry sits relative to its origin.
+ */
+export function makeOutlineMaterial(thickness: number): THREE.Material {
+  const material = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide })
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.outlineThickness = { value: thickness }
+    shader.vertexShader = 'uniform float outlineThickness;\n' + shader.vertexShader
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      '#include <begin_vertex>\n\ttransformed += normalize( normal ) * outlineThickness;',
+    )
+  }
+  return material
+}
+
 export function makeMaterial(
   preset: MaterialPreset,
   baseColor: string,
-  matcaps: Record<'solidview' | 'studio' | 'ceramic', THREE.Texture>,
+  matcaps: Record<MatcapName, THREE.Texture>,
 ): THREE.Material {
   switch (preset) {
     case 'solidview':
@@ -87,6 +116,12 @@ export function makeMaterial(
       return new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.35, metalness: 1.0 })
     case 'ceramic':
       return new THREE.MeshMatcapMaterial({ matcap: matcaps.ceramic })
+    case 'comic':
+      // Cel-shaded comic look: flat posterized tone bands plus a baked-in
+      // black silhouette outline (see the 'comic' matcap in matcaps.ts). Like
+      // the other matcap presets it ignores baseColor and renders identically
+      // in the thumbnailer and the live viewer.
+      return new THREE.MeshMatcapMaterial({ matcap: matcaps.comic })
     case 'studio':
       // Dedicated thumbnail-renderer preset. A matcap bakes its lighting,
       // soft shadow and color into the texture and ignores the scene's

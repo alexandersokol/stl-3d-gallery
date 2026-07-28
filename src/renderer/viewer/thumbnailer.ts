@@ -11,8 +11,8 @@
 
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
-import { DEFAULT_BASE_COLOR, makeMaterial, type MaterialPreset } from './materials'
-import { makeMatcaps } from './matcaps'
+import { DEFAULT_BASE_COLOR, makeMaterial, makeOutlineMaterial, type MaterialPreset } from './materials'
+import { makeMatcaps, type MatcapName } from './matcaps'
 
 const DEFAULT_SIZE = 256
 const BACKGROUND_FILL_FRACTION = 0.85 // model should fill ~85% of the frame
@@ -26,9 +26,9 @@ interface RendererState {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   // Built once and reused across calls -- the matcap presets ('solidview',
-  // 'studio', 'ceramic') need matcap textures, and generating one involves a
-  // throwaway <canvas> 2D draw (see matcaps.ts) wasteful to repeat per thumb.
-  matcaps: Record<'solidview' | 'studio' | 'ceramic', THREE.Texture>
+  // 'studio', 'ceramic', 'comic') need matcap textures, and generating one
+  // involves a throwaway <canvas> 2D draw (matcaps.ts) wasteful to repeat.
+  matcaps: Record<MatcapName, THREE.Texture>
 }
 
 let state: RendererState | null = null
@@ -140,10 +140,17 @@ async function doRenderThumbnail(
   const mesh = new THREE.Mesh(geometry, material)
   scene.add(mesh)
 
+  const sphere = geometry.boundingSphere ?? new THREE.Sphere(new THREE.Vector3(), 1)
+  const center = sphere.center
+  const radius = sphere.radius > 0 ? sphere.radius : 1
+
+  // Comic preset: same inverted-hull ink outline the live viewer draws (see
+  // SceneManager.setComicOutline), so a comic thumbnail matches the preview.
+  // Rides along as a child sharing the geometry; its material is disposed below.
+  const outline = preset === 'comic' ? new THREE.Mesh(geometry, makeOutlineMaterial(radius * 0.02)) : null
+  if (outline) mesh.add(outline)
+
   try {
-    const sphere = geometry.boundingSphere ?? new THREE.Sphere(new THREE.Vector3(), 1)
-    const center = sphere.center
-    const radius = sphere.radius > 0 ? sphere.radius : 1
 
     // Fixed pleasant 3/4 view in Z-up space (+X right, -Y toward the
     // viewer/front, +Z up) — the SAME direction used by cameraControls.ts's
@@ -171,6 +178,8 @@ async function doRenderThumbnail(
     scene.remove(mesh)
     geometry.dispose()
     material.dispose()
+    // Outline shares `geometry` (disposed above) — only its own material here.
+    if (outline) (outline.material as THREE.Material).dispose()
   }
 }
 

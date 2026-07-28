@@ -8,9 +8,10 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import { fitCameraToObject } from './cameraControls'
-import { makeMaterial, DEFAULT_BASE_COLOR, type MaterialPreset } from './materials'
+import { makeMaterial, makeOutlineMaterial, DEFAULT_BASE_COLOR, type MaterialPreset } from './materials'
 import { makeLights, type LightPreset } from './lighting'
-import { makeMatcaps } from './matcaps'
+import { makeMatcaps, type MatcapName } from './matcaps'
+import { tintNegativeAxisSprites } from './viewHelperTint'
 
 // Radial-gradient background stops: lighter center (behind the model),
 // gently darker toward the edges — a soft studio/vignette backdrop rather
@@ -63,12 +64,17 @@ export class SceneManager {
   private readonly viewHelper: ViewHelper
   private readonly clock: THREE.Clock
   private readonly envMap: THREE.Texture
-  private readonly matcaps: { solidview: THREE.Texture; studio: THREE.Texture; ceramic: THREE.Texture }
+  private readonly matcaps: Record<MatcapName, THREE.Texture>
   private readonly backgroundTextures: { dark: THREE.CanvasTexture; light: THREE.CanvasTexture }
 
   private mesh: THREE.Mesh | null = null
   private geometry: THREE.BufferGeometry | null = null
   private material: THREE.Material | null = null
+  // The comic preset's inverted-hull ink outline: a black back-face shell that
+  // shares the model geometry, added as a child of `mesh` (only while the comic
+  // preset is active). Its own material is owned here; the shared geometry is
+  // NOT disposed through it.
+  private outlineMesh: THREE.Mesh | null = null
   private lights: THREE.Light[] = []
   private gridHelper: THREE.GridHelper | null = null
 
@@ -146,6 +152,9 @@ export class SceneManager {
     // camera to look down an axis when clicked. It reads camera.up, so with
     // up=+Z (see above) it renders Z pointing up, matching the scene.
     this.viewHelper = new ViewHelper(this.camera, this.renderer.domElement)
+    // Stock ViewHelper draws the -X/-Y/-Z balls in near-invisible grey on our
+    // dark viewport; tint them muted red/green/blue so all six axes read.
+    tintNegativeAxisSprites(this.viewHelper)
     this.viewHelper.center = this.controls.target
     this.clock = new THREE.Clock()
     this.renderer.domElement.addEventListener('pointerup', this.handleViewHelperPointerUp)
@@ -182,12 +191,37 @@ export class SceneManager {
   }
 
   private disposeCurrentMesh(): void {
+    // Outline first: it's a child of `mesh` and shares `geometry`, so drop its
+    // own material here (never the shared geometry) before the mesh goes.
+    this.disposeOutline()
     if (this.mesh) this.scene.remove(this.mesh)
     this.geometry?.dispose()
     this.material?.dispose()
     this.geometry = null
     this.material = null
     this.mesh = null
+  }
+
+  private disposeOutline(): void {
+    if (!this.outlineMesh) return
+    this.outlineMesh.parent?.remove(this.outlineMesh)
+    ;(this.outlineMesh.material as THREE.Material).dispose()
+    this.outlineMesh = null
+  }
+
+  // Adds or removes the comic preset's inverted-hull ink outline to match
+  // whether the comic material is active. The outline shares the current model
+  // geometry and rides along as a child of the model mesh.
+  private setComicOutline(enabled: boolean): void {
+    if (enabled) {
+      if (this.outlineMesh || !this.mesh || !this.geometry) return
+      const thickness = (this.modelRadius || 1) * 0.02
+      const outline = new THREE.Mesh(this.geometry, makeOutlineMaterial(thickness))
+      this.outlineMesh = outline
+      this.mesh.add(outline)
+    } else {
+      this.disposeOutline()
+    }
   }
 
   private animate = (): void => {
@@ -250,6 +284,7 @@ export class SceneManager {
     this.geometry = geometry
     this.material = material
     this.mesh = mesh
+    this.setComicOutline(this.materialPreset === 'comic')
 
     const box = new THREE.Box3().setFromObject(mesh)
     const sphere = box.isEmpty() ? new THREE.Sphere(new THREE.Vector3(), 1) : box.getBoundingSphere(new THREE.Sphere())
@@ -294,6 +329,7 @@ export class SceneManager {
     this.material?.dispose()
     this.mesh.material = material
     this.material = material
+    this.setComicOutline(preset === 'comic')
   }
 
   setLighting(preset: LightPreset, intensity: number): void {
@@ -362,6 +398,7 @@ export class SceneManager {
     this.matcaps.solidview.dispose()
     this.matcaps.studio.dispose()
     this.matcaps.ceramic.dispose()
+    this.matcaps.comic.dispose()
     this.backgroundTextures.dark.dispose()
     this.backgroundTextures.light.dispose()
 

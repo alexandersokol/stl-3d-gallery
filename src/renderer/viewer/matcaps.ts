@@ -8,6 +8,12 @@
 
 import * as THREE from 'three'
 
+// The material presets whose look is a baked matcap texture (as opposed to the
+// lit MeshStandardMaterial presets). Single source of truth for the shape of
+// the matcap texture set, so makeMaterial / SceneManager / thumbnailer all
+// stay in lockstep when a matcap preset is added.
+export type MatcapName = 'solidview' | 'studio' | 'ceramic' | 'comic'
+
 const SIZE = 256
 
 function drawMatcap(stops: Array<[number, string]>, bg: string): HTMLCanvasElement {
@@ -61,11 +67,7 @@ function toTexture(canvas: HTMLCanvasElement): THREE.Texture {
  * 'studio' is the default thumbnail-renderer preset; 'solidview' is the
  * default 3D-preview material.
  */
-export function makeMatcaps(): {
-  solidview: THREE.Texture
-  studio: THREE.Texture
-  ceramic: THREE.Texture
-} {
+export function makeMatcaps(): Record<MatcapName, THREE.Texture> {
   // Solid View: Blender "solid mode" look — a neutral matte grey clay, a bit
   // darker overall with darker shadows (but not as dark as Studio). Soft
   // light-grey highlight (no bright specular hotspot, so it reads matte), a
@@ -108,9 +110,32 @@ export function makeMatcaps(): {
     '#71767f',
   )
 
+  // Comic: the FLAT-COLOR fill of a cel-shaded / comic-book look. Instead of a
+  // smooth gradient the stops are HARD steps (each color offset is duplicated
+  // so the canvas gradient jumps rather than blends), giving crisp posterized
+  // tone bands — highlight, mid, shadow — like the flats in ink-and-color
+  // comic art. High contrast between bands so the cel banding reads clearly.
+  // The bold black CONTOUR ("lines like in comics") is NOT drawn here — it's a
+  // separate inverted-hull outline mesh (see makeOutlineMaterial / SceneManager
+  // setComicOutline), which gives a clean uniform line the matcap rim can't.
+  const comicCanvas = drawMatcap(
+    [
+      [0, '#f4f4f6'],
+      [0.42, '#f4f4f6'], // highlight band — flat
+      [0.42, '#aeb0b7'],
+      [0.68, '#aeb0b7'], // mid band — flat
+      [0.68, '#5f616a'],
+      [0.9, '#5f616a'], // shadow band — flat
+      [0.9, '#33343a'],
+      [1, '#33343a'], // darkest edge band
+    ],
+    '#33343a',
+  )
+
   return {
     solidview: toTexture(solidviewCanvas),
     studio: toTexture(studioCanvas),
     ceramic: toTexture(ceramicCanvas),
+    comic: toTexture(comicCanvas),
   }
 }

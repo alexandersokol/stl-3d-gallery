@@ -7,22 +7,25 @@ import {
   SECONDARY_MATERIAL_PRESETS,
   MATERIAL_PRESET_LABELS,
   makeMaterial,
+  makeOutlineMaterial,
   DEFAULT_BASE_COLOR,
   type MaterialPreset,
 } from './materials'
 
-const matcaps: Record<'solidview' | 'studio' | 'ceramic', THREE.Texture> = {
+const matcaps: Record<'solidview' | 'studio' | 'ceramic' | 'comic', THREE.Texture> = {
   solidview: new THREE.Texture(),
   studio: new THREE.Texture(),
   ceramic: new THREE.Texture(),
+  comic: new THREE.Texture(),
 }
 
 describe('MATERIAL_PRESETS', () => {
   it('is the primary group followed by the secondary group, in display order', () => {
-    // Picker order: Solid View / Studio / Normals / Wireframe | rest.
+    // Picker order: Solid View / Studio / Comic / Normals / Wireframe | rest.
     const expected: MaterialPreset[] = [
       'solidview',
       'studio',
+      'comic',
       'normals',
       'wireframe',
       'clay',
@@ -35,7 +38,7 @@ describe('MATERIAL_PRESETS', () => {
     expect(MATERIAL_PRESETS).toEqual([...PRIMARY_MATERIAL_PRESETS, ...SECONDARY_MATERIAL_PRESETS])
     // 'solidview' is the 3D-preview default, listed first.
     expect(MATERIAL_PRESETS[0]).toBe('solidview')
-    expect(MATERIAL_PRESETS).toHaveLength(9)
+    expect(MATERIAL_PRESETS).toHaveLength(10)
   })
 
   it('has a friendly label for every preset', () => {
@@ -101,6 +104,12 @@ describe('makeMaterial', () => {
     expect((m as THREE.MeshMatcapMaterial).matcap).toBe(matcaps.studio)
   })
 
+  it('comic -> MeshMatcapMaterial using the comic matcap texture, ignoring baseColor', () => {
+    const m = makeMaterial('comic', '#ff0000', matcaps)
+    expect(m).toBeInstanceOf(THREE.MeshMatcapMaterial)
+    expect((m as THREE.MeshMatcapMaterial).matcap).toBe(matcaps.comic)
+  })
+
   it('wireframe -> basic material with wireframe enabled', () => {
     const m = makeMaterial('wireframe', '#fff', matcaps)
     expect(m).toBeInstanceOf(THREE.MeshBasicMaterial)
@@ -110,5 +119,22 @@ describe('makeMaterial', () => {
   it('normals -> MeshNormalMaterial ignoring baseColor', () => {
     const m = makeMaterial('normals', '#fff', matcaps)
     expect(m).toBeInstanceOf(THREE.MeshNormalMaterial)
+  })
+})
+
+describe('makeOutlineMaterial', () => {
+  it('is a black back-face basic material that pushes vertices along normals', () => {
+    const m = makeOutlineMaterial(0.5) as THREE.MeshBasicMaterial
+    expect(m).toBeInstanceOf(THREE.MeshBasicMaterial)
+    expect(m.side).toBe(THREE.BackSide)
+    expect(m.color.getHexString()).toBe('000000')
+
+    // The normal-push is injected via onBeforeCompile; run it and confirm the
+    // shader carries the thickness uniform + displacement.
+    const shader = { uniforms: {} as Record<string, { value: unknown }>, vertexShader: '#include <begin_vertex>' }
+    m.onBeforeCompile?.(shader as never, undefined as never)
+    expect(shader.uniforms.outlineThickness.value).toBe(0.5)
+    expect(shader.vertexShader).toContain('outlineThickness')
+    expect(shader.vertexShader).toContain('normalize( normal )')
   })
 })
