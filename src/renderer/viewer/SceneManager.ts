@@ -11,12 +11,48 @@ import { makeMaterial, DEFAULT_BASE_COLOR, type MaterialPreset } from './materia
 import { makeLights, type LightPreset } from './lighting'
 import { makeMatcaps } from './matcaps'
 
-const BACKGROUND_LIGHT = 0xf2f3f5
-const BACKGROUND_DARK = 0x1a1b1e
+// Radial-gradient background stops: lighter center (behind the model),
+// gently darker toward the edges — a soft studio/vignette backdrop rather
+// than a flat fill. Kept subtle (low contrast between center/mid/edge) so it
+// reads as ambient studio light, not a spotlight.
+const BACKGROUND_GRADIENT_DARK = { center: '#3c3f45', mid: '#2b2d31', edge: '#202225' }
+const BACKGROUND_GRADIENT_LIGHT = { center: '#fbfbfc', mid: '#eaebed', edge: '#dcdee1' }
+const BACKGROUND_TEXTURE_SIZE = 512
 
 // Default grid extent/position used before any model has been loaded.
 const DEFAULT_GRID_RADIUS = 5
 const GRID_DIVISIONS = 20
+
+/**
+ * Renders a soft radial-gradient vignette to a square canvas: full center
+ * color out to ~30% of the radius, fading through a midtone to the edge
+ * color by 100%. Used as scene.background so the live viewer reads as a
+ * studio backdrop instead of a flat fill.
+ */
+function makeBackgroundGradientTexture(stops: { center: string; mid: string; edge: string }): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = BACKGROUND_TEXTURE_SIZE
+  canvas.height = BACKGROUND_TEXTURE_SIZE
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('SceneManager: 2D context unavailable for background gradient')
+
+  const cx = BACKGROUND_TEXTURE_SIZE / 2
+  const cy = BACKGROUND_TEXTURE_SIZE / 2
+  const outerR = BACKGROUND_TEXTURE_SIZE / 2
+
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, outerR)
+  gradient.addColorStop(0, stops.center)
+  gradient.addColorStop(0.3, stops.center)
+  gradient.addColorStop(0.65, stops.mid)
+  gradient.addColorStop(1, stops.edge)
+
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, BACKGROUND_TEXTURE_SIZE, BACKGROUND_TEXTURE_SIZE)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
 
 export class SceneManager {
   private readonly renderer: THREE.WebGLRenderer
@@ -25,6 +61,7 @@ export class SceneManager {
   private readonly controls: OrbitControls
   private readonly envMap: THREE.Texture
   private readonly matcaps: { clay: THREE.Texture; ceramic: THREE.Texture }
+  private readonly backgroundTextures: { dark: THREE.CanvasTexture; light: THREE.CanvasTexture }
 
   private mesh: THREE.Mesh | null = null
   private geometry: THREE.BufferGeometry | null = null
@@ -51,7 +88,14 @@ export class SceneManager {
     this.renderer.setSize(width, height, false)
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(BACKGROUND_DARK)
+    // Built once and cached; setBackground() just swaps which texture is
+    // assigned to scene.background, so mode switches never re-render canvas
+    // gradients on the hot path.
+    this.backgroundTextures = {
+      dark: makeBackgroundGradientTexture(BACKGROUND_GRADIENT_DARK),
+      light: makeBackgroundGradientTexture(BACKGROUND_GRADIENT_LIGHT),
+    }
+    this.scene.background = this.backgroundTextures.dark
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000)
     // STL files use the Z-up convention (Blender / 3D-printing); orient the
@@ -166,7 +210,7 @@ export class SceneManager {
   }
 
   setBackground(mode: 'light' | 'dark'): void {
-    this.scene.background = new THREE.Color(mode === 'light' ? BACKGROUND_LIGHT : BACKGROUND_DARK)
+    this.scene.background = mode === 'light' ? this.backgroundTextures.light : this.backgroundTextures.dark
   }
 
   setGrid(on: boolean): void {
@@ -218,6 +262,8 @@ export class SceneManager {
     this.envMap.dispose()
     this.matcaps.clay.dispose()
     this.matcaps.ceramic.dispose()
+    this.backgroundTextures.dark.dispose()
+    this.backgroundTextures.light.dispose()
 
     this.renderer.dispose()
   }
