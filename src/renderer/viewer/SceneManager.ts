@@ -63,7 +63,7 @@ export class SceneManager {
   private readonly viewHelper: ViewHelper
   private readonly clock: THREE.Clock
   private readonly envMap: THREE.Texture
-  private readonly matcaps: { studio: THREE.Texture; ceramic: THREE.Texture }
+  private readonly matcaps: { solidview: THREE.Texture; studio: THREE.Texture; ceramic: THREE.Texture }
   private readonly backgroundTextures: { dark: THREE.CanvasTexture; light: THREE.CanvasTexture }
 
   private mesh: THREE.Mesh | null = null
@@ -72,7 +72,7 @@ export class SceneManager {
   private lights: THREE.Light[] = []
   private gridHelper: THREE.GridHelper | null = null
 
-  private materialPreset: MaterialPreset = 'clay'
+  private materialPreset: MaterialPreset = 'solidview'
   private baseColor = DEFAULT_BASE_COLOR
   private lightPreset: LightPreset = 'studio'
   private lightIntensity = 1
@@ -359,6 +359,7 @@ export class SceneManager {
     this.controls.dispose()
 
     this.envMap.dispose()
+    this.matcaps.solidview.dispose()
     this.matcaps.studio.dispose()
     this.matcaps.ceramic.dispose()
     this.backgroundTextures.dark.dispose()

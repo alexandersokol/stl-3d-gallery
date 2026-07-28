@@ -8,7 +8,7 @@
 
 import { useEffect } from 'react'
 import { useUiStore, type CameraMode } from '../state/store'
-import { MATERIAL_PRESETS } from '../viewer/materials'
+import { MATERIAL_PRESETS, MATERIAL_PRESET_LABELS } from '../viewer/materials'
 import { CloseIcon } from '../assets/icons'
 
 const CAMERA_MODE_OPTIONS: { value: CameraMode; label: string }[] = [
@@ -94,7 +94,7 @@ export default function SettingsModal() {
               >
                 {MATERIAL_PRESETS.map((preset) => (
                   <option key={preset} value={preset}>
-                    {preset}
+                    {MATERIAL_PRESET_LABELS[preset]}
                   </option>
                 ))}
               </select>

@@ -5,7 +5,11 @@
 // for now.
 
 import { useUiStore } from '../state/store'
-import { MATERIAL_PRESETS } from '../viewer/materials'
+import {
+  PRIMARY_MATERIAL_PRESETS,
+  SECONDARY_MATERIAL_PRESETS,
+  MATERIAL_PRESET_LABELS,
+} from '../viewer/materials'
 import { LIGHT_PRESETS } from '../viewer/lighting'
 import {
   PaletteIcon,
@@ -44,7 +48,7 @@ export default function ViewerToolbar() {
         <span className="toolbar-group-icon" aria-hidden="true">
           <PaletteIcon size={16} />
         </span>
-        {MATERIAL_PRESETS.map((preset) => (
+        {PRIMARY_MATERIAL_PRESETS.map((preset) => (
           <button
             key={preset}
             type="button"
@@ -52,7 +56,20 @@ export default function ViewerToolbar() {
             aria-pressed={material === preset}
             onClick={() => setMaterial(preset)}
           >
-            {preset}
+            {MATERIAL_PRESET_LABELS[preset]}
+          </button>
+        ))}
+        {/* Divider between the everyday primary presets and the rest. */}
+        <span className="toolbar-separator" role="separator" aria-orientation="vertical" />
+        {SECONDARY_MATERIAL_PRESETS.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            className="toolbar-button"
+            aria-pressed={material === preset}
+            onClick={() => setMaterial(preset)}
+          >
+            {MATERIAL_PRESET_LABELS[preset]}
           </button>
         ))}
         <input

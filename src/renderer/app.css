@@ -574,6 +574,15 @@ textarea {
   margin-right: 0.15rem;
 }
 
+/* Vertical divider inside a toolbar group (e.g. between the primary material
+   presets and the rest). */
+.toolbar-separator {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.15rem 0.25rem;
+  background: var(--color-border);
+}
+
 .toolbar-button {
   display: inline-flex;
   align-items: center;

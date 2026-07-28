@@ -1,31 +1,48 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { MATERIAL_PRESETS, makeMaterial, DEFAULT_BASE_COLOR, type MaterialPreset } from './materials'
+import {
+  MATERIAL_PRESETS,
+  PRIMARY_MATERIAL_PRESETS,
+  SECONDARY_MATERIAL_PRESETS,
+  MATERIAL_PRESET_LABELS,
+  makeMaterial,
+  DEFAULT_BASE_COLOR,
+  type MaterialPreset,
+} from './materials'
 
-const matcaps: Record<'studio' | 'ceramic', THREE.Texture> = {
+const matcaps: Record<'solidview' | 'studio' | 'ceramic', THREE.Texture> = {
+  solidview: new THREE.Texture(),
   studio: new THREE.Texture(),
   ceramic: new THREE.Texture(),
 }
 
 describe('MATERIAL_PRESETS', () => {
-  it('lists all eight presets in order, clay first and studio last', () => {
+  it('is the primary group followed by the secondary group, in display order', () => {
+    // Picker order: Solid View / Studio / Normals / Wireframe | rest.
     const expected: MaterialPreset[] = [
+      'solidview',
+      'studio',
+      'normals',
+      'wireframe',
       'clay',
       'matte',
       'glossy',
       'metal',
       'ceramic',
-      'wireframe',
-      'normals',
-      'studio',
     ]
     expect(MATERIAL_PRESETS).toEqual(expected)
-    expect(MATERIAL_PRESETS[0]).toBe('clay')
-    // 'studio' is the dedicated thumbnail-renderer preset; it lives last in
-    // the 3D-preview picker since its primary home is the thumbnails.
-    expect(MATERIAL_PRESETS[MATERIAL_PRESETS.length - 1]).toBe('studio')
-    expect(MATERIAL_PRESETS).toHaveLength(8)
+    expect(MATERIAL_PRESETS).toEqual([...PRIMARY_MATERIAL_PRESETS, ...SECONDARY_MATERIAL_PRESETS])
+    // 'solidview' is the 3D-preview default, listed first.
+    expect(MATERIAL_PRESETS[0]).toBe('solidview')
+    expect(MATERIAL_PRESETS).toHaveLength(9)
+  })
+
+  it('has a friendly label for every preset', () => {
+    for (const preset of MATERIAL_PRESETS) {
+      expect(MATERIAL_PRESET_LABELS[preset]).toBeTruthy()
+    }
+    expect(MATERIAL_PRESET_LABELS.solidview).toBe('Solid View')
   })
 })
 
@@ -68,6 +85,12 @@ describe('makeMaterial', () => {
     const m = makeMaterial('ceramic', '#fff', matcaps)
     expect(m).toBeInstanceOf(THREE.MeshMatcapMaterial)
     expect((m as THREE.MeshMatcapMaterial).matcap).toBe(matcaps.ceramic)
+  })
+
+  it('solidview -> MeshMatcapMaterial using the solidview matcap texture, ignoring baseColor', () => {
+    const m = makeMaterial('solidview', '#ff0000', matcaps)
+    expect(m).toBeInstanceOf(THREE.MeshMatcapMaterial)
+    expect((m as THREE.MeshMatcapMaterial).matcap).toBe(matcaps.solidview)
   })
 
   it('studio -> MeshMatcapMaterial using the studio matcap texture, ignoring baseColor', () => {

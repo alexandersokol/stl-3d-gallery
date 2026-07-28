@@ -33,7 +33,7 @@ describe('useUiStore', () => {
     expect(s.search).toBe('')
     expect(s.activeTags).toEqual([])
     expect(s.includeSubfolders).toBe(false)
-    expect(s.material).toBe('clay')
+    expect(s.material).toBe('solidview')
     expect(s.thumbnailPreset).toBe('studio')
     expect(s.cameraMode).toBe('fly')
     expect(s.settingsOpen).toBe(false)

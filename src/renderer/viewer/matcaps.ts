@@ -1,4 +1,5 @@
-// Procedural matcap textures for the 'studio' and 'ceramic' material presets.
+// Procedural matcap textures for the 'solidview', 'studio' and 'ceramic'
+// material presets.
 //
 // Rather than shipping binary matcap image assets, we draw a simple lit-sphere
 // radial gradient to a canvas at runtime and wrap it in a THREE.CanvasTexture.
@@ -47,28 +48,46 @@ function toTexture(canvas: HTMLCanvasElement): THREE.Texture {
 }
 
 /**
- * Builds the 'studio' and 'ceramic' matcap textures used by MeshMatcapMaterial
- * in makeMaterial(). Cheap enough to call once (e.g. in SceneManager's
- * constructor) and reuse for the lifetime of the app.
+ * Builds the 'solidview', 'studio' and 'ceramic' matcap textures used by
+ * MeshMatcapMaterial in makeMaterial(). Cheap enough to call once (e.g. in
+ * SceneManager's constructor) and reuse for the lifetime of the app.
  *
  * Because a matcap bakes its lighting/shadow/color into the texture and
- * ignores the scene's lights and environment, the 'studio' preset renders
- * pixel-identically in the offscreen thumbnailer and the live 3D preview —
- * the whole reason it exists (it's the default thumbnail-renderer preset).
+ * ignores the scene's lights and environment, these presets render
+ * pixel-identically in the offscreen thumbnailer and the live 3D preview.
+ * 'studio' is the default thumbnail-renderer preset; 'solidview' is the
+ * default 3D-preview material.
  */
-export function makeMatcaps(): { studio: THREE.Texture; ceramic: THREE.Texture } {
+export function makeMatcaps(): {
+  solidview: THREE.Texture
+  studio: THREE.Texture
+  ceramic: THREE.Texture
+} {
+  // Solid View: Blender "solid mode" look — a neutral matte grey clay. Soft
+  // light-grey highlight (no bright specular hotspot, so it reads matte), a
+  // mid grey body, gentle darkening toward the silhouette for a soft
+  // ambient-occlusion feel. The 3D-preview default material.
+  const solidviewCanvas = drawMatcap(
+    [
+      [0, '#d3d4d7'],
+      [0.4, '#b7b8bc'],
+      [0.72, '#8b8d94'],
+      [1, '#53555d'],
+    ],
+    '#484a52',
+  )
+
   // Studio: the dedicated thumbnail-renderer look — a smooth lavender "studio
-  // clay". Cool near-white highlight upper-left, a light lavender-grey body,
-  // a mid lavender-grey, then a deep cool purple-blue silhouette edge, over a
-  // dark purple background (visible only at the sphere's very rim). Tuned to
-  // match the reference thumbnails.
+  // clay". Soft light-lavender highlight (kept matte — no near-white specular
+  // hotspot), a lavender-grey body, then a deep cool purple-blue silhouette
+  // edge, over a dark purple background (visible only at the sphere's very
+  // rim). Tuned to match the reference thumbnails.
   const studioCanvas = drawMatcap(
     [
-      [0, '#eeecf6'],
-      [0.3, '#c9c4dd'],
-      [0.6, '#948dba'],
-      [0.82, '#5f5985'],
-      [1, '#332f4c'],
+      [0, '#dcd7ee'],
+      [0.4, '#b8b1d2'],
+      [0.72, '#8a83ac'],
+      [1, '#3f3b58'],
     ],
     '#2a2740',
   )
@@ -86,6 +105,7 @@ export function makeMatcaps(): { studio: THREE.Texture; ceramic: THREE.Texture }
   )
 
   return {
+    solidview: toTexture(solidviewCanvas),
     studio: toTexture(studioCanvas),
     ceramic: toTexture(ceramicCanvas),
   }
