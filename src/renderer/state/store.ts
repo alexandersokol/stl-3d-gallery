@@ -5,12 +5,32 @@ import { DEFAULT_BASE_COLOR, type MaterialPreset } from '../viewer/materials'
 import type { LightPreset } from '../viewer/lighting'
 
 export type Mode = 'grid' | 'viewer'
+export type UiTheme = 'light' | 'dark'
+
+// Persists the app-chrome theme (panels/bars/cards -- NOT the viewer's
+// scene background, which is the separate `background` field below) across
+// restarts. Read synchronously at module load so the store's initial state
+// already reflects the user's last choice -- App.tsx's effect that stamps
+// documentElement[data-theme] then only has to run once on mount for the
+// common case, minimizing any dark->light flash.
+const UI_THEME_STORAGE_KEY = 'stl-gallery:uiTheme'
+
+function readStoredUiTheme(): UiTheme {
+  try {
+    return localStorage.getItem(UI_THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
+  } catch {
+    // localStorage can throw (e.g. disabled storage) -- fall back to the
+    // shipped default rather than letting theme init crash the app.
+    return 'dark'
+  }
+}
 
 export interface UiState {
   cwd: string | null
   scan: ScanResult | null
   selectedIndex: number | null
   mode: Mode
+  uiTheme: UiTheme
   showFilmstrip: boolean
   showInfo: boolean
   search: string
@@ -40,6 +60,7 @@ export interface UiState {
   next(): void
   prev(): void
   setMode(m: Mode): void
+  toggleUiTheme(): void
   toggleFilmstrip(): void
   toggleInfo(): void
   setSearch(s: string): void
@@ -62,6 +83,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   scan: null,
   selectedIndex: null,
   mode: 'grid',
+  uiTheme: readStoredUiTheme(),
   showFilmstrip: true,
   showInfo: true,
   search: '',
@@ -114,6 +136,17 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
 
   setMode: (m) => set({ mode: m }),
+  toggleUiTheme: () =>
+    set((s) => {
+      const next: UiTheme = s.uiTheme === 'dark' ? 'light' : 'dark'
+      try {
+        localStorage.setItem(UI_THEME_STORAGE_KEY, next)
+      } catch {
+        // Storage may be unavailable -- the toggle still applies for the
+        // current session, it just won't survive a restart.
+      }
+      return { uiTheme: next }
+    }),
   toggleFilmstrip: () => set((s) => ({ showFilmstrip: !s.showFilmstrip })),
   toggleInfo: () => set((s) => ({ showInfo: !s.showInfo })),
   setSearch: (s) => set({ search: s }),

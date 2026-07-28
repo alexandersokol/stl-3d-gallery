@@ -275,6 +275,26 @@ describe('<App/>', () => {
   })
 })
 
+describe('<App/> UI theme toggle', () => {
+  it('renders a "Toggle theme" button that flips uiTheme and stamps documentElement[data-theme]', async () => {
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+    const toggleButton = screen.getByRole('button', { name: 'Toggle theme' })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+
+    fireEvent.click(toggleButton)
+
+    expect(useUiStore.getState().uiTheme).toBe('light')
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'))
+
+    fireEvent.click(toggleButton)
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'dark'))
+  })
+})
+
 describe('<App/> keyboard shortcuts', () => {
   it('ArrowRight/ArrowLeft change selectedIndex only in viewer mode', async () => {
     scanFolder.mockResolvedValue(twoFileScanResult)

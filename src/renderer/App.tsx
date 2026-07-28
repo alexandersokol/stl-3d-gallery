@@ -11,7 +11,14 @@ import Viewer from './components/Viewer'
 import ViewerToolbar from './components/ViewerToolbar'
 import Filmstrip from './components/Filmstrip'
 import InfoPanel from './components/InfoPanel'
-import { GridViewIcon, ViewInArIcon, ViewCarouselIcon, VisibilityIcon } from './assets/icons'
+import {
+  GridViewIcon,
+  ViewInArIcon,
+  ViewCarouselIcon,
+  VisibilityIcon,
+  DarkModeIcon,
+  LightModeIcon,
+} from './assets/icons'
 
 // True when the keyboard event originated in something the user is typing
 // into (a text field, the color/range toolbar inputs, or a contentEditable
@@ -27,6 +34,8 @@ export default function App() {
   const cwd = useUiStore((s) => s.cwd)
   const mode = useUiStore((s) => s.mode)
   const setMode = useUiStore((s) => s.setMode)
+  const uiTheme = useUiStore((s) => s.uiTheme)
+  const toggleUiTheme = useUiStore((s) => s.toggleUiTheme)
   const showFilmstrip = useUiStore((s) => s.showFilmstrip)
   const showInfo = useUiStore((s) => s.showInfo)
   const toggleFilmstrip = useUiStore((s) => s.toggleFilmstrip)
@@ -36,6 +45,15 @@ export default function App() {
   // single .stl opened from the OS -- Task 7.1) and opens its parent folder,
   // selecting the file within it.
   useOpenFile()
+
+  // Stamps the app-chrome theme onto <html> so app.css's
+  // `:root[data-theme="..."]` token blocks apply. `uiTheme` already starts
+  // from localStorage (see store.ts), so this only matters for keeping the
+  // attribute in sync when the user toggles -- the initial paint is already
+  // correct without waiting for this effect to run.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', uiTheme)
+  }, [uiTheme])
 
   // Global shortcuts. Reads fresh state via getState() inside the handler
   // (rather than depending on `mode` etc.) so the listener is attached once
@@ -93,6 +111,16 @@ export default function App() {
             Viewer
           </button>
         </div>
+        <button
+          type="button"
+          className="theme-toggle-button"
+          aria-label="Toggle theme"
+          aria-pressed={uiTheme === 'light'}
+          title={uiTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          onClick={toggleUiTheme}
+        >
+          {uiTheme === 'dark' ? <DarkModeIcon /> : <LightModeIcon />}
+        </button>
         {mode === 'grid' && (
           <div className="grid-filters">
             <SearchBox />

@@ -43,6 +43,7 @@ describe('useUiStore', () => {
     expect(s.currentStats).toBeNull()
     expect(s.metaByPath).toEqual({})
     expect(s.resetCameraSignal).toBe(0)
+    expect(s.uiTheme).toBe('dark')
   })
 
   it('openFolder scans, sets cwd/scan, and resets selection/search/tags', async () => {
@@ -178,6 +179,18 @@ describe('useUiStore', () => {
 
     useUiStore.getState().setCurrentStats(null)
     expect(useUiStore.getState().currentStats).toBeNull()
+  })
+
+  it('toggleUiTheme flips uiTheme and persists the choice to localStorage', () => {
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+
+    useUiStore.getState().toggleUiTheme()
+    expect(useUiStore.getState().uiTheme).toBe('light')
+    expect(localStorage.getItem('stl-gallery:uiTheme')).toBe('light')
+
+    useUiStore.getState().toggleUiTheme()
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+    expect(localStorage.getItem('stl-gallery:uiTheme')).toBe('dark')
   })
 
   it('setMeta stores metadata keyed by path, without clobbering other paths', () => {
