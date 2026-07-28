@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { AddIcon, CloseIcon } from '../assets/icons'
 
 export interface TagEditorProps {
   tags: string[]
@@ -40,7 +41,7 @@ export default function TagEditor({ tags, onChange }: TagEditorProps) {
           <li key={tag} className="tag-chip">
             <span className="tag-chip-label">{tag}</span>
             <button type="button" className="tag-chip-remove" aria-label={`Remove tag ${tag}`} onClick={() => removeTag(tag)}>
-              ×
+              <CloseIcon size={12} />
             </button>
           </li>
         ))}
@@ -55,7 +56,8 @@ export default function TagEditor({ tags, onChange }: TagEditorProps) {
           placeholder="Add tag"
           aria-label="Add tag"
         />
-        <button type="button" className="tag-add-button" onClick={addTag}>
+        <button type="button" className="btn tag-add-button" onClick={addTag}>
+          <AddIcon size={14} />
           Add
         </button>
       </div>

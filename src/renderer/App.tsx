@@ -11,6 +11,7 @@ import Viewer from './components/Viewer'
 import ViewerToolbar from './components/ViewerToolbar'
 import Filmstrip from './components/Filmstrip'
 import InfoPanel from './components/InfoPanel'
+import { GridViewIcon, ViewInArIcon, ViewCarouselIcon, VisibilityIcon } from './assets/icons'
 
 // True when the keyboard event originated in something the user is typing
 // into (a text field, the color/range toolbar inputs, or a contentEditable
@@ -84,9 +85,11 @@ export default function App() {
         <Breadcrumbs />
         <div className="mode-toggle" role="group" aria-label="View mode">
           <button type="button" aria-pressed={mode === 'grid'} onClick={() => setMode('grid')}>
+            <GridViewIcon />
             Grid
           </button>
           <button type="button" aria-pressed={mode === 'viewer'} onClick={() => setMode('viewer')}>
+            <ViewInArIcon />
             Viewer
           </button>
         </div>
@@ -99,9 +102,11 @@ export default function App() {
         {mode === 'viewer' && (
           <div className="pane-toggles" role="group" aria-label="Panels">
             <button type="button" aria-pressed={showFilmstrip} onClick={toggleFilmstrip}>
+              <ViewCarouselIcon />
               Filmstrip
             </button>
             <button type="button" aria-pressed={showInfo} onClick={toggleInfo}>
+              <VisibilityIcon />
               Info
             </button>
           </div>

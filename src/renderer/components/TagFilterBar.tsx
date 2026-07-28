@@ -1,5 +1,6 @@
 import { useUiStore } from '../state/store'
 import { allTags } from '../lib/filter'
+import { SellIcon } from '../assets/icons'
 
 // Chip row over the current folder's tag universe (derived from
 // metaByPath, populated by openFolder's batch metadata read). Clicking a
@@ -30,6 +31,7 @@ export default function TagFilterBar() {
             aria-pressed={active}
             onClick={() => toggleTag(tag)}
           >
+            <SellIcon size={13} />
             {tag}
           </button>
         )

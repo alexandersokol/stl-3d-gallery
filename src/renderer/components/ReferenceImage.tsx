@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { api } from '../ipc/api'
 import { useUiStore } from '../state/store'
+import { ImageIcon, LinkOffIcon, CloseIcon, ZoomInIcon } from '../assets/icons'
 
 // Accepted drop MIME types -> the extension `writeLinkedImage` should store
 // them under. Clipboard paste always writes 'png' regardless of this table
@@ -226,14 +227,19 @@ export default function ReferenceImage({ modelPath }: ReferenceImageProps) {
             aria-label="Enlarge reference image"
           >
             <img src={previewUrl} alt="Reference" className="reference-image-preview" />
+            <span className="reference-image-zoom-hint" aria-hidden="true">
+              <ZoomInIcon />
+            </span>
             {dragOver && <div className="reference-image-drop-hint">Drop to replace</div>}
           </button>
-          <button type="button" className="reference-image-detach" onClick={() => void handleDetach()}>
+          <button type="button" className="btn reference-image-detach" onClick={() => void handleDetach()}>
+            <LinkOffIcon size={14} />
             Detach
           </button>
         </div>
       ) : (
         <div className={`reference-image-dropzone${dragOver ? ' reference-image-dropzone-active' : ''}`}>
+          <ImageIcon size={22} className="reference-image-dropzone-icon" />
           Drag an image here, or paste (⌘/Ctrl+V)
         </div>
       )}
@@ -248,7 +254,7 @@ export default function ReferenceImage({ modelPath }: ReferenceImageProps) {
             aria-label="Close enlarged image"
             onClick={() => setEnlarged(false)}
           >
-            ×
+            <CloseIcon size={22} />
           </button>
           <img src={previewUrl} alt="Reference (enlarged)" className="reference-image-overlay-img" />
         </div>

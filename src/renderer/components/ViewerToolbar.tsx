@@ -7,6 +7,17 @@
 import { useUiStore } from '../state/store'
 import { MATERIAL_PRESETS } from '../viewer/materials'
 import { LIGHT_PRESETS } from '../viewer/lighting'
+import {
+  PaletteIcon,
+  LightbulbIcon,
+  DarkModeIcon,
+  LightModeIcon,
+  GridOnIcon,
+  AutorenewIcon,
+  RestartAltIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '../assets/icons'
 
 export default function ViewerToolbar() {
   const material = useUiStore((s) => s.material)
@@ -30,6 +41,9 @@ export default function ViewerToolbar() {
   return (
     <div className="viewer-toolbar">
       <div className="toolbar-group" role="group" aria-label="Material">
+        <span className="toolbar-group-icon" aria-hidden="true">
+          <PaletteIcon size={16} />
+        </span>
         {MATERIAL_PRESETS.map((preset) => (
           <button
             key={preset}
@@ -51,6 +65,9 @@ export default function ViewerToolbar() {
       </div>
 
       <div className="toolbar-group" role="group" aria-label="Lighting">
+        <span className="toolbar-group-icon" aria-hidden="true">
+          <LightbulbIcon size={16} />
+        </span>
         {LIGHT_PRESETS.map((preset) => (
           <button
             key={preset}
@@ -83,25 +100,31 @@ export default function ViewerToolbar() {
           aria-pressed={background === 'dark'}
           onClick={() => setBackground(background === 'dark' ? 'light' : 'dark')}
         >
+          {background === 'dark' ? <DarkModeIcon /> : <LightModeIcon />}
           Background: {background}
         </button>
         <button type="button" className="toolbar-button" aria-pressed={showGrid} onClick={toggleGrid}>
+          <GridOnIcon />
           Show grid
         </button>
         <button type="button" className="toolbar-button" aria-pressed={autoRotate} onClick={toggleAutoRotate}>
+          <AutorenewIcon />
           Auto-rotate
         </button>
         <button type="button" className="toolbar-button" onClick={requestResetCamera}>
+          <RestartAltIcon />
           Reset camera
         </button>
       </div>
 
       <div className="toolbar-group" role="group" aria-label="Navigation">
         <button type="button" className="toolbar-button" onClick={prev}>
+          <ChevronLeftIcon />
           Prev
         </button>
         <button type="button" className="toolbar-button" onClick={next}>
           Next
+          <ChevronRightIcon />
         </button>
       </div>
     </div>

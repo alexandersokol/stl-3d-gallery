@@ -1,5 +1,6 @@
 import type { FolderEntry } from '../../shared/types'
 import { useUiStore } from '../state/store'
+import { FolderIcon } from '../assets/icons'
 
 export default function FolderTile({ folder }: { folder: FolderEntry }) {
   const openFolder = useUiStore((s) => s.openFolder)
@@ -12,7 +13,7 @@ export default function FolderTile({ folder }: { folder: FolderEntry }) {
       title={folder.name}
     >
       <span className="tile-glyph" aria-hidden="true">
-        📁
+        <FolderIcon size={40} />
       </span>
       <span className="tile-name">{folder.name}</span>
     </button>

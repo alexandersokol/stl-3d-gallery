@@ -12,6 +12,7 @@ import { useUiStore } from '../state/store'
 import { api } from '../ipc/api'
 import TagEditor from './TagEditor'
 import ReferenceImage from './ReferenceImage'
+import { SellIcon, ImageIcon } from '../assets/icons'
 
 const SAVE_DEBOUNCE_MS = 500
 
@@ -180,7 +181,10 @@ export default function InfoPanel() {
           </section>
 
           <section className="info-section">
-            <h3>Tags</h3>
+            <h3>
+              <SellIcon size={14} />
+              Tags
+            </h3>
             <TagEditor tags={tags} onChange={handleTagsChange} />
           </section>
 
@@ -195,7 +199,10 @@ export default function InfoPanel() {
           </section>
 
           <section className="info-section">
-            <h3>Reference Image</h3>
+            <h3>
+              <ImageIcon size={14} />
+              Reference Image
+            </h3>
             <ReferenceImage modelPath={file.path} />
           </section>
         </>
