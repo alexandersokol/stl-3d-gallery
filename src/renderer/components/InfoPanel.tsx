@@ -12,6 +12,7 @@ import { useUiStore } from '../state/store'
 import { api } from '../ipc/api'
 import TagEditor from './TagEditor'
 import ReferenceImage from './ReferenceImage'
+import MeshRepairPanel from './MeshRepairPanel'
 import {
   SellIcon,
   ImageIcon,
@@ -251,6 +252,11 @@ export default function InfoPanel() {
               Reference Image
             </h3>
             <ReferenceImage modelPath={file.path} />
+          </section>
+
+          <section className="info-section">
+            <h3>Mesh Repair</h3>
+            <MeshRepairPanel modelPath={file.path} />
           </section>
         </>
       )}

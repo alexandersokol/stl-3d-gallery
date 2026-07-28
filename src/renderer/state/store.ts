@@ -134,6 +134,9 @@ export interface UiState {
   confirmRename(newName: string): Promise<void>
   confirmCopy(newName: string): Promise<void>
   confirmDelete(): Promise<void>
+  // Refresh the folder and switch the viewer to a just-written model (the
+  // repaired `-fixed.stl` produced by the Mesh Repair panel).
+  openRepairedFile(path: string): Promise<void>
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -296,6 +299,10 @@ export const useUiStore = create<UiState>((set, get) => ({
     } catch (err: any) {
       set({ fileActionError: err?.message ?? 'Move failed.' })
     }
+  },
+
+  openRepairedFile: async (path) => {
+    await openAfterOp(path) // rescan + select the new file in the viewer
   },
 }))
 

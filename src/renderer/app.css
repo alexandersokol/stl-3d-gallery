@@ -1294,3 +1294,89 @@ textarea {
   color: inherit;
   cursor: pointer;
 }
+
+/* --- Mesh Repair panel (InfoPanel section) --------------------------- */
+.mesh-repair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mesh-repair-banner {
+  margin: 0;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-soft-border);
+  color: var(--color-text);
+  font-size: 0.75rem;
+}
+
+.mesh-repair-analyze,
+.mesh-repair-fix {
+  align-self: flex-start;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.mesh-repair-report {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+}
+
+.mesh-repair-ok {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3fbf6f;
+}
+
+.mesh-repair-warn {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e0a34a;
+}
+
+.mesh-repair-issues {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.mesh-repair-info {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--color-text-faint);
+}
+
+.mesh-repair-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem 0.6rem;
+}
+
+.mesh-repair-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.mesh-repair-option input {
+  cursor: pointer;
+}
+
+.mesh-repair-error {
+  color: var(--color-danger);
+  font-size: 0.75rem;
+  margin: 0;
+}

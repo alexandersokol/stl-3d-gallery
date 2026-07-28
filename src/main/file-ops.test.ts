@@ -7,7 +7,7 @@ import path from 'path'
 const trashItem = vi.fn(async (..._a: unknown[]) => {})
 vi.mock('electron', () => ({ shell: { trashItem: (...a: unknown[]) => trashItem(...a) } }))
 
-import { renameModel, copyModel, moveModel, deleteModel } from './file-ops'
+import { renameModel, copyModel, moveModel, deleteModel, writeRepairedModel } from './file-ops'
 
 let dir: string
 let model: string
@@ -122,5 +122,24 @@ describe('deleteModel', () => {
     expect(trashed).toContain(path.join(dir, '.meta', `${BASE}.json`))
     expect(trashed).toContain(path.join(dir, '.thumb', `${BASE}.v6_studio.png`))
     expect(trashed).toContain(path.join(dir, '.linked', `${BASE}.png`))
+  })
+})
+
+describe('writeRepairedModel', () => {
+  it('writes a -fixed.stl sibling with the given bytes, leaving the original', async () => {
+    const bytes = new TextEncoder().encode('REPAIRED').buffer
+    const { path: newPath } = await writeRepairedModel(model, bytes)
+    expect(newPath).toBe(path.join(dir, 'girl-fixed.stl'))
+    expect((await fs.readFile(newPath)).toString()).toBe('REPAIRED')
+    // Original untouched.
+    expect((await fs.readFile(model)).toString()).toBe('STL-BYTES')
+  })
+
+  it('auto-increments the name when -fixed is already taken', async () => {
+    const bytes = () => new TextEncoder().encode('R').buffer
+    const first = await writeRepairedModel(model, bytes())
+    const second = await writeRepairedModel(model, bytes())
+    expect(first.path).toBe(path.join(dir, 'girl-fixed.stl'))
+    expect(second.path).toBe(path.join(dir, 'girl-fixed-2.stl'))
   })
 })

@@ -4,6 +4,29 @@ export interface ScanResult { folders: FolderEntry[]; files: FileEntry[] }
 export interface Metadata { schemaVersion: 1; tags: string[]; notes: string; linkedImage?: string; updatedAt: string }
 export interface ModelStats { triCount: number; vertCount: number; bbox: { x: number; y: number; z: number } }
 
+// Result of analyzing a model's mesh for 3D-printability issues. `triCount`/
+// `vertCount` are the welded (deduplicated) counts. `duplicateVertices` is
+// neutral info (coincident vertex instances that welded away — nonzero for
+// every healthy STL) and is deliberately excluded from `watertight`.
+export interface MeshAnalysis {
+  triCount: number
+  vertCount: number
+  duplicateVertices: number
+  boundaryEdges: number
+  nonManifoldEdges: number
+  degenerateTriangles: number
+  watertight: boolean
+}
+
+// Which repair passes to apply. `fillHoles` and `fullManifold` require welded
+// topology, so they weld internally regardless of `weld`.
+export interface RepairOptions {
+  weld: boolean
+  clean: boolean
+  fillHoles: boolean
+  fullManifold: boolean
+}
+
 // Result of a rename/copy/move that produced a model at a new path. `path` is
 // the model's new absolute path.
 export interface FileOpResult { path: string }
@@ -29,6 +52,9 @@ export interface Api {
   copyModel(model: string, newName: string): Promise<FileOpResult>
   moveModel(model: string): Promise<FileOpResult | null>
   deleteModel(model: string): Promise<void>
+  // Writes repaired STL bytes to a collision-safe sibling of `model` named
+  // `<name>-fixed.stl` (or `-fixed-2.stl`, …). Returns the new path.
+  writeStlFile(model: string, bytes: ArrayBuffer): Promise<FileOpResult>
   getLastFolder(): Promise<string | null>
   setLastFolder(dir: string): Promise<void>
   onOpenFile(cb: (path: string) => void): void
