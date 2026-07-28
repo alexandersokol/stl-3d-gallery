@@ -84,6 +84,11 @@ export class SceneManager {
   // camera-navigation mode (see applyCameraMode()). Null until a model has
   // been loaded; the render loop and applyCameraMode() fall back to 1.
   private modelRadius: number | null = null
+  // Center of the current model's bounding sphere (world space). Used by
+  // fitCameraToObject/resetCamera so framing is derived from the geometry's
+  // own bounding sphere rather than a re-computed Box3 (the latter was
+  // unreliable on the first large-mesh load).
+  private modelCenter = new THREE.Vector3()
   // 'fly' (default): dolly all the way to/through the surface, for
   // fly-through/interior inspection. 'surface': stop just outside the
   // surface. Driven later by a Settings screen via setCameraMode().
@@ -231,8 +236,12 @@ export class SceneManager {
     geometry.computeVertexNormals()
     geometry.computeBoundingSphere()
 
-    this.modelRadius =
-      geometry.boundingSphere && geometry.boundingSphere.radius > 0 ? geometry.boundingSphere.radius : 1
+    // Frame from the geometry's own bounding sphere (reliable) rather than a
+    // re-computed Box3 (which returned a wrong, tiny box on the first large
+    // mesh, causing an extreme zoomed-in initial view).
+    const bs = geometry.boundingSphere
+    this.modelRadius = bs && bs.radius > 0 ? bs.radius : 1
+    this.modelCenter.copy(bs ? bs.center : new THREE.Vector3())
 
     const material = makeMaterial(this.materialPreset, this.baseColor, this.matcaps)
     const mesh = new THREE.Mesh(geometry, material)
@@ -249,10 +258,13 @@ export class SceneManager {
     this.gridHelper = this.buildGridHelper(sphere.radius, box.isEmpty() ? 0 : box.min.z)
     this.scene.add(this.gridHelper)
 
-    fitCameraToObject(this.camera, mesh, this.controls)
-    // Model radius changed (new model), so re-derive min/maxDistance for
-    // the current camera-navigation mode against the new size.
+    // Re-derive OrbitControls min/maxDistance for the new model size BEFORE
+    // fitting. fitCameraToObject calls controls.update(), which clamps the
+    // camera distance to [minDistance, maxDistance]; if applyCameraMode ran
+    // AFTER the fit, the first model would be clamped to the stale no-model
+    // maxDistance (radius 1 * 50 = 50), snapping the camera far too close.
     this.applyCameraMode()
+    fitCameraToObject(this.camera, this.controls, this.modelCenter, this.modelRadius)
   }
 
   /**
@@ -308,7 +320,7 @@ export class SceneManager {
 
   resetCamera(): void {
     if (this.mesh) {
-      fitCameraToObject(this.camera, this.mesh, this.controls)
+      fitCameraToObject(this.camera, this.controls, this.modelCenter, this.modelRadius ?? 1)
       return
     }
     this.camera.position.set(3, 3, 3)
