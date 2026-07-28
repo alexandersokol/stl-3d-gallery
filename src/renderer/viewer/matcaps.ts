@@ -68,19 +68,20 @@ function toTexture(canvas: HTMLCanvasElement): THREE.Texture {
  * default 3D-preview material.
  */
 export function makeMatcaps(): Record<MatcapName, THREE.Texture> {
-  // Solid View: Blender "solid mode" look — a neutral matte grey clay, a bit
-  // darker overall with darker shadows (but not as dark as Studio). Soft
-  // light-grey highlight (no bright specular hotspot, so it reads matte), a
-  // mid grey body, strong darkening toward the silhouette for a soft
-  // ambient-occlusion feel. The 3D-preview default material.
+  // Solid View: Blender "solid mode" look — a strictly NEUTRAL matte grey
+  // (r≈g≈b, no cool/lavender tint) and darker overall, with the darkest
+  // shadows of the matcap presets (deeper than Studio). Soft grey highlight
+  // (no specular hotspot, so it reads matte), a mid grey body, and a strong
+  // fall-off to near-black at the silhouette for a heavy ambient-occlusion
+  // feel.
   const solidviewCanvas = drawMatcap(
     [
-      [0, '#c9cacd'],
-      [0.4, '#a4a5aa'],
-      [0.72, '#727479'],
-      [1, '#3d3f46'],
+      [0, '#bcbcbe'],
+      [0.4, '#898a8c'],
+      [0.72, '#48494c'],
+      [1, '#161719'],
     ],
-    '#3a3c42',
+    '#131315',
   )
 
   // Studio: the dedicated thumbnail-renderer look — a matte "studio clay".

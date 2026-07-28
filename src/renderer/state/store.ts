@@ -150,7 +150,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   search: '',
   activeTags: [],
   includeSubfolders: false,
-  material: 'solidview',
+  material: 'studio',
   thumbnailPreset: readStoredThumbnailPreset(),
   cameraMode: readStoredCameraMode(),
   settingsOpen: false,

@@ -21,11 +21,10 @@ const matcaps: Record<'solidview' | 'studio' | 'ceramic' | 'comic', THREE.Textur
 
 describe('MATERIAL_PRESETS', () => {
   it('is the primary group followed by the secondary group, in display order', () => {
-    // Picker order: Solid View / Studio / Comic / Normals / Wireframe | rest.
+    // Picker order: Studio / Solid View / Normals / Wireframe | rest.
     const expected: MaterialPreset[] = [
-      'solidview',
       'studio',
-      'comic',
+      'solidview',
       'normals',
       'wireframe',
       'clay',
@@ -33,11 +32,12 @@ describe('MATERIAL_PRESETS', () => {
       'glossy',
       'metal',
       'ceramic',
+      'comic',
     ]
     expect(MATERIAL_PRESETS).toEqual(expected)
     expect(MATERIAL_PRESETS).toEqual([...PRIMARY_MATERIAL_PRESETS, ...SECONDARY_MATERIAL_PRESETS])
-    // 'solidview' is the 3D-preview default, listed first.
-    expect(MATERIAL_PRESETS[0]).toBe('solidview')
+    // 'studio' is the 3D-preview default, listed first.
+    expect(MATERIAL_PRESETS[0]).toBe('studio')
     expect(MATERIAL_PRESETS).toHaveLength(10)
   })
 

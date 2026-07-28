@@ -94,6 +94,21 @@
   box-sizing: border-box;
 }
 
+/* The app owns all of its own scrolling internally (the grid, the info panel,
+   the filmstrip each scroll on their own). The document itself must never
+   scroll -- without this reset the browser's default body margin plus the
+   full-height .app produce a stray whole-window scrollbar. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Base layout + focus                                                     */
 /* ---------------------------------------------------------------------- */
@@ -101,7 +116,7 @@
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   color: var(--color-text);
   background: var(--color-bg);
   font-family: var(--font-sans);
@@ -416,6 +431,10 @@ textarea {
 
 .grid-view {
   flex: 1;
+  /* Required so this flex child actually shrinks to the available height and
+     scrolls internally, instead of growing to its content height and pushing
+     the whole app past the viewport. */
+  min-height: 0;
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

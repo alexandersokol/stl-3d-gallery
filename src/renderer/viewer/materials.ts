@@ -19,13 +19,13 @@ export type MaterialPreset =
   | 'comic'
 
 // The 3D-preview material picker shows presets in two groups separated by a
-// divider: the everyday "primary" set first (Solid View is the preview
-// default), then the rest. Keep these two arrays as the single source of
-// truth for both ordering and grouping; MATERIAL_PRESETS below is their
-// concatenation (the full list, in display order), used everywhere a flat
-// list is enough (e.g. the Settings thumbnail-preset dropdown).
-export const PRIMARY_MATERIAL_PRESETS: MaterialPreset[] = ['solidview', 'studio', 'comic', 'normals', 'wireframe']
-export const SECONDARY_MATERIAL_PRESETS: MaterialPreset[] = ['clay', 'matte', 'glossy', 'metal', 'ceramic']
+// divider: the everyday "primary" set first (Studio is the preview default),
+// then the rest. Keep these two arrays as the single source of truth for both
+// ordering and grouping; MATERIAL_PRESETS below is their concatenation (the
+// full list, in display order), used everywhere a flat list is enough (e.g.
+// the Settings thumbnail-preset dropdown).
+export const PRIMARY_MATERIAL_PRESETS: MaterialPreset[] = ['studio', 'solidview', 'normals', 'wireframe']
+export const SECONDARY_MATERIAL_PRESETS: MaterialPreset[] = ['clay', 'matte', 'glossy', 'metal', 'ceramic', 'comic']
 
 export const MATERIAL_PRESETS: MaterialPreset[] = [...PRIMARY_MATERIAL_PRESETS, ...SECONDARY_MATERIAL_PRESETS]
 
