@@ -18,8 +18,7 @@ const REPO_ROOT = path.resolve(__dirname, '../..')
 const MAIN_ENTRY = path.join(REPO_ROOT, 'out/main/index.js')
 const FIXTURES_DIR = path.join(REPO_ROOT, 'tests/fixtures')
 
-const SCRATCH_DIR =
-  '/private/tmp/claude-501/-Users-alexander-Projects-Python-stl-gallery/de4be7d3-5862-4ed0-916e-4a8d29f65288/scratchpad'
+const SCRATCH_DIR = path.join(REPO_ROOT, 'test-results', 'screenshots')
 const GRID_PNG = path.join(SCRATCH_DIR, 'e2e-grid.png')
 const VIEWER_PNG = path.join(SCRATCH_DIR, 'e2e-viewer.png')
 
