@@ -6,25 +6,65 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import { fitCameraToObject } from './cameraControls'
-import { makeMaterial, type MaterialPreset } from './materials'
+import { makeMaterial, DEFAULT_BASE_COLOR, type MaterialPreset } from './materials'
 import { makeLights, type LightPreset } from './lighting'
 import { makeMatcaps } from './matcaps'
 
-const BACKGROUND_LIGHT = 0xf2f3f5
-const BACKGROUND_DARK = 0x1a1b1e
+// Radial-gradient background stops: lighter center (behind the model),
+// gently darker toward the edges — a soft studio/vignette backdrop rather
+// than a flat fill. Kept subtle (low contrast between center/mid/edge) so it
+// reads as ambient studio light, not a spotlight.
+const BACKGROUND_GRADIENT_DARK = { center: '#3c3f45', mid: '#2b2d31', edge: '#202225' }
+const BACKGROUND_GRADIENT_LIGHT = { center: '#fbfbfc', mid: '#eaebed', edge: '#dcdee1' }
+const BACKGROUND_TEXTURE_SIZE = 512
 
 // Default grid extent/position used before any model has been loaded.
 const DEFAULT_GRID_RADIUS = 5
 const GRID_DIVISIONS = 20
+
+/**
+ * Renders a soft radial-gradient vignette to a square canvas: full center
+ * color out to ~30% of the radius, fading through a midtone to the edge
+ * color by 100%. Used as scene.background so the live viewer reads as a
+ * studio backdrop instead of a flat fill.
+ */
+function makeBackgroundGradientTexture(stops: { center: string; mid: string; edge: string }): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = BACKGROUND_TEXTURE_SIZE
+  canvas.height = BACKGROUND_TEXTURE_SIZE
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('SceneManager: 2D context unavailable for background gradient')
+
+  const cx = BACKGROUND_TEXTURE_SIZE / 2
+  const cy = BACKGROUND_TEXTURE_SIZE / 2
+  const outerR = BACKGROUND_TEXTURE_SIZE / 2
+
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, outerR)
+  gradient.addColorStop(0, stops.center)
+  gradient.addColorStop(0.3, stops.center)
+  gradient.addColorStop(0.65, stops.mid)
+  gradient.addColorStop(1, stops.edge)
+
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, BACKGROUND_TEXTURE_SIZE, BACKGROUND_TEXTURE_SIZE)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
 
 export class SceneManager {
   private readonly renderer: THREE.WebGLRenderer
   private readonly scene: THREE.Scene
   private readonly camera: THREE.PerspectiveCamera
   private readonly controls: OrbitControls
+  private readonly viewHelper: ViewHelper
+  private readonly clock: THREE.Clock
   private readonly envMap: THREE.Texture
   private readonly matcaps: { clay: THREE.Texture; ceramic: THREE.Texture }
+  private readonly backgroundTextures: { dark: THREE.CanvasTexture; light: THREE.CanvasTexture }
 
   private mesh: THREE.Mesh | null = null
   private geometry: THREE.BufferGeometry | null = null
@@ -32,11 +72,27 @@ export class SceneManager {
   private lights: THREE.Light[] = []
   private gridHelper: THREE.GridHelper | null = null
 
-  private materialPreset: MaterialPreset = 'matte'
-  private baseColor = '#b0b6be'
+  private materialPreset: MaterialPreset = 'clay'
+  private baseColor = DEFAULT_BASE_COLOR
   private lightPreset: LightPreset = 'studio'
   private lightIntensity = 1
   private gridOn = false
+
+  // Bounding-sphere radius of the currently loaded model, used every frame
+  // to keep the camera's near/far clip planes tight around the model (see
+  // animate()) and to size OrbitControls' min/maxDistance for the current
+  // camera-navigation mode (see applyCameraMode()). Null until a model has
+  // been loaded; the render loop and applyCameraMode() fall back to 1.
+  private modelRadius: number | null = null
+  // Center of the current model's bounding sphere (world space). Used by
+  // fitCameraToObject/resetCamera so framing is derived from the geometry's
+  // own bounding sphere rather than a re-computed Box3 (the latter was
+  // unreliable on the first large-mesh load).
+  private modelCenter = new THREE.Vector3()
+  // 'fly' (default): dolly all the way to/through the surface, for
+  // fly-through/interior inspection. 'surface': stop just outside the
+  // surface. Driven later by a Settings screen via setCameraMode().
+  private cameraMode: 'fly' | 'surface' = 'fly'
 
   private rafId: number | null = null
   private disposed = false
@@ -51,9 +107,21 @@ export class SceneManager {
     this.renderer.setSize(width, height, false)
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(BACKGROUND_DARK)
+    // Built once and cached; setBackground() just swaps which texture is
+    // assigned to scene.background, so mode switches never re-render canvas
+    // gradients on the hot path.
+    this.backgroundTextures = {
+      dark: makeBackgroundGradientTexture(BACKGROUND_GRADIENT_DARK),
+      light: makeBackgroundGradientTexture(BACKGROUND_GRADIENT_LIGHT),
+    }
+    this.scene.background = this.backgroundTextures.dark
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000)
+    // STL files use the Z-up convention (Blender / 3D-printing); orient the
+    // camera's up-vector to +Z so OrbitControls orbits around a vertical Z
+    // axis and models stand upright instead of appearing tipped onto their
+    // back. See cameraControls.ts for the shared framing logic.
+    this.camera.up.set(0, 0, 1)
     this.camera.position.set(3, 3, 3)
     this.camera.lookAt(0, 0, 0)
 
@@ -71,7 +139,16 @@ export class SceneManager {
     this.controls = new OrbitControls(this.camera, canvas)
     this.controls.enableDamping = true
     this.controls.target.set(0, 0, 0)
+    this.applyCameraMode()
     this.controls.update()
+
+    // Corner axis gizmo (Blender/Tripo-style): shows X/Y/Z and animates the
+    // camera to look down an axis when clicked. It reads camera.up, so with
+    // up=+Z (see above) it renders Z pointing up, matching the scene.
+    this.viewHelper = new ViewHelper(this.camera, this.renderer.domElement)
+    this.viewHelper.center = this.controls.target
+    this.clock = new THREE.Clock()
+    this.renderer.domElement.addEventListener('pointerup', this.handleViewHelperPointerUp)
 
     this.lights = makeLights(this.lightPreset, this.lightIntensity)
     for (const light of this.lights) this.scene.add(light)
@@ -82,10 +159,15 @@ export class SceneManager {
     this.animate()
   }
 
-  private buildGridHelper(radius: number, y: number): THREE.GridHelper {
+  private buildGridHelper(radius: number, z: number): THREE.GridHelper {
     const size = Math.max(radius * 4, 2)
     const helper = new THREE.GridHelper(size, GRID_DIVISIONS)
-    helper.position.y = y
+    // GridHelper is built flat in the XZ plane (Y-up ground) by default.
+    // The scene is Z-up (see camera.up above), so the "ground" is the XY
+    // plane -- rotate +90 deg about X to lay the grid flat there, then seat
+    // it at the model's base (min Z) so it reads as a floor under the model.
+    helper.rotation.x = Math.PI / 2
+    helper.position.z = z
     helper.visible = this.gridOn
     return helper
   }
@@ -110,8 +192,40 @@ export class SceneManager {
 
   private animate = (): void => {
     this.rafId = requestAnimationFrame(this.animate)
+    const delta = this.clock.getDelta()
+    if (this.viewHelper.animating) this.viewHelper.update(delta)
     this.controls.update()
+
+    // Keep the clip planes tight around the model at the CURRENT zoom
+    // distance every frame, rather than relying on the fixed near/far set
+    // once at fit time. A fixed far plane clips the model when zooming out
+    // past it; a fixed near plane slices into the model (visible interior
+    // cross-sections) when zooming/dollying in past it. Recomputing from
+    // the live camera-to-target distance each frame guarantees the whole
+    // model stays between the planes at any zoom level, including dollying
+    // up to/through the surface in 'fly' mode.
+    const dist = this.camera.position.distanceTo(this.controls.target)
+    const r = this.modelRadius || 1
+    this.camera.near = Math.max(dist - r * 1.1, r * 0.002)
+    this.camera.far = dist + r * 1.5
+    this.camera.updateProjectionMatrix()
+
     this.renderer.render(this.scene, this.camera)
+
+    // ViewHelper draws itself as a second pass over the main render, using
+    // its own small viewport in the corner; autoClear must be off so it
+    // doesn't wipe the scene that was just rendered above.
+    this.renderer.autoClear = false
+    this.viewHelper.render(this.renderer)
+    this.renderer.autoClear = true
+  }
+
+  // If the gizmo consumed the click it starts animating the camera itself;
+  // there is nothing further for us to do. Clicks outside the gizmo's small
+  // corner viewport fall through untouched, so OrbitControls dragging is
+  // unaffected.
+  private handleViewHelperPointerUp = (event: PointerEvent): void => {
+    this.viewHelper.handleClick(event)
   }
 
   setModel(positions: Float32Array): void {
@@ -121,6 +235,13 @@ export class SceneManager {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geometry.computeVertexNormals()
     geometry.computeBoundingSphere()
+
+    // Frame from the geometry's own bounding sphere (reliable) rather than a
+    // re-computed Box3 (which returned a wrong, tiny box on the first large
+    // mesh, causing an extreme zoomed-in initial view).
+    const bs = geometry.boundingSphere
+    this.modelRadius = bs && bs.radius > 0 ? bs.radius : 1
+    this.modelCenter.copy(bs ? bs.center : new THREE.Vector3())
 
     const material = makeMaterial(this.materialPreset, this.baseColor, this.matcaps)
     const mesh = new THREE.Mesh(geometry, material)
@@ -134,10 +255,34 @@ export class SceneManager {
     const sphere = box.isEmpty() ? new THREE.Sphere(new THREE.Vector3(), 1) : box.getBoundingSphere(new THREE.Sphere())
 
     this.disposeGridHelper()
-    this.gridHelper = this.buildGridHelper(sphere.radius, box.isEmpty() ? 0 : box.min.y)
+    this.gridHelper = this.buildGridHelper(sphere.radius, box.isEmpty() ? 0 : box.min.z)
     this.scene.add(this.gridHelper)
 
-    fitCameraToObject(this.camera, mesh, this.controls)
+    // Re-derive OrbitControls min/maxDistance for the new model size BEFORE
+    // fitting. fitCameraToObject calls controls.update(), which clamps the
+    // camera distance to [minDistance, maxDistance]; if applyCameraMode ran
+    // AFTER the fit, the first model would be clamped to the stale no-model
+    // maxDistance (radius 1 * 50 = 50), snapping the camera far too close.
+    this.applyCameraMode()
+    fitCameraToObject(this.camera, this.controls, this.modelCenter, this.modelRadius)
+  }
+
+  /**
+   * Sets the camera-navigation mode that a future Settings screen will
+   * drive: 'fly' allows dollying all the way to/through the model surface
+   * (fly-through / interior inspection), while 'surface' stops the camera
+   * just outside the surface (classic zoom-to-surface behavior). Dynamic
+   * near/far (see animate()) means neither mode ever clips the model.
+   */
+  setCameraMode(mode: 'fly' | 'surface'): void {
+    this.cameraMode = mode
+    this.applyCameraMode()
+  }
+
+  private applyCameraMode(): void {
+    const r = this.modelRadius || 1
+    this.controls.minDistance = this.cameraMode === 'fly' ? r * 0.01 : r * 1.05
+    this.controls.maxDistance = r * 50
   }
 
   setMaterial(preset: MaterialPreset, baseColor: string): void {
@@ -161,7 +306,7 @@ export class SceneManager {
   }
 
   setBackground(mode: 'light' | 'dark'): void {
-    this.scene.background = new THREE.Color(mode === 'light' ? BACKGROUND_LIGHT : BACKGROUND_DARK)
+    this.scene.background = mode === 'light' ? this.backgroundTextures.light : this.backgroundTextures.dark
   }
 
   setGrid(on: boolean): void {
@@ -175,7 +320,7 @@ export class SceneManager {
 
   resetCamera(): void {
     if (this.mesh) {
-      fitCameraToObject(this.camera, this.mesh, this.controls)
+      fitCameraToObject(this.camera, this.controls, this.modelCenter, this.modelRadius ?? 1)
       return
     }
     this.camera.position.set(3, 3, 3)
@@ -199,6 +344,9 @@ export class SceneManager {
 
     if (this.rafId != null) cancelAnimationFrame(this.rafId)
 
+    this.renderer.domElement.removeEventListener('pointerup', this.handleViewHelperPointerUp)
+    this.viewHelper.dispose()
+
     this.disposeCurrentMesh()
 
     for (const light of this.lights) this.scene.remove(light)
@@ -213,6 +361,8 @@ export class SceneManager {
     this.envMap.dispose()
     this.matcaps.clay.dispose()
     this.matcaps.ceramic.dispose()
+    this.backgroundTextures.dark.dispose()
+    this.backgroundTextures.light.dispose()
 
     this.renderer.dispose()
   }

@@ -1,22 +1,76 @@
 import { create } from 'zustand'
 import type { Metadata, ModelStats, ScanResult } from '../../shared/types'
 import { api } from '../ipc/api'
-import type { MaterialPreset } from '../viewer/materials'
+import { DEFAULT_BASE_COLOR, MATERIAL_PRESETS, type MaterialPreset } from '../viewer/materials'
 import type { LightPreset } from '../viewer/lighting'
+import { UI_THEME_STORAGE_KEY, readStoredUiTheme, type UiTheme } from '../theme'
 
+export type { UiTheme }
 export type Mode = 'grid' | 'viewer'
+
+// Persists the app-chrome theme (panels/bars/cards -- NOT the viewer's
+// scene background, which is the separate `background` field below) across
+// restarts. Read synchronously at module load so the store's initial state
+// already reflects the user's last choice. The key/read logic lives in
+// ../theme (shared with main.tsx's pre-mount `applyStoredThemeSync`, which
+// stamps documentElement[data-theme] before first paint) -- they must stay
+// in lockstep, hence the shared helper rather than a second copy here.
+
+// Persists the configured thumbnail-rendering material preset (separate
+// from `material`, which is the live 3D-preview material) across restarts,
+// the same way `uiTheme` is persisted above. Exposed via the Settings screen
+// (SettingsModal.tsx).
+const THUMBNAIL_PRESET_STORAGE_KEY = 'stl-gallery:thumbnailPreset'
+
+function readStoredThumbnailPreset(): MaterialPreset {
+  try {
+    const stored = localStorage.getItem(THUMBNAIL_PRESET_STORAGE_KEY)
+    return stored && (MATERIAL_PRESETS as string[]).includes(stored) ? (stored as MaterialPreset) : 'clay'
+  } catch {
+    return 'clay'
+  }
+}
+
+// Persists the viewer's camera navigation mode across restarts, the same
+// way `uiTheme`/`thumbnailPreset` are persisted above. Exposed via the
+// Settings screen (SettingsModal.tsx); driven into the live engine by
+// Viewer.tsx calling SceneManager.setCameraMode().
+export type CameraMode = 'fly' | 'surface'
+const CAMERA_MODE_STORAGE_KEY = 'stl-gallery:cameraMode'
+
+function readStoredCameraMode(): CameraMode {
+  try {
+    const stored = localStorage.getItem(CAMERA_MODE_STORAGE_KEY)
+    return stored === 'surface' ? 'surface' : 'fly'
+  } catch {
+    return 'fly'
+  }
+}
 
 export interface UiState {
   cwd: string | null
   scan: ScanResult | null
   selectedIndex: number | null
   mode: Mode
+  uiTheme: UiTheme
   showFilmstrip: boolean
   showInfo: boolean
   search: string
   activeTags: string[]
   includeSubfolders: boolean
   material: MaterialPreset
+  // Material preset used when rendering grid thumbnails -- independent of
+  // `material` above (the live 3D-preview material). Defaults to 'clay' and
+  // persists to localStorage; a future Settings screen will expose a picker
+  // for it.
+  thumbnailPreset: MaterialPreset
+  // Viewer camera navigation mode: 'fly' allows dollying through/inside the
+  // model (fly-through inspection); 'surface' stops the camera just outside
+  // the model's surface. Defaults to 'fly' and persists to localStorage.
+  // Driven into the live SceneManager by Viewer.tsx.
+  cameraMode: CameraMode
+  // Whether the Settings modal (SettingsModal.tsx) is currently open.
+  settingsOpen: boolean
   lighting: LightPreset
   lightIntensity: number
   baseColor: string
@@ -40,12 +94,17 @@ export interface UiState {
   next(): void
   prev(): void
   setMode(m: Mode): void
+  toggleUiTheme(): void
   toggleFilmstrip(): void
   toggleInfo(): void
   setSearch(s: string): void
   toggleTag(t: string): void
   setIncludeSubfolders(b: boolean): void
   setMaterial(preset: MaterialPreset): void
+  setThumbnailPreset(preset: MaterialPreset): void
+  setCameraMode(mode: CameraMode): void
+  openSettings(): void
+  closeSettings(): void
   setLighting(preset: LightPreset): void
   setLightIntensity(n: number): void
   setBaseColor(s: string): void
@@ -62,15 +121,19 @@ export const useUiStore = create<UiState>((set, get) => ({
   scan: null,
   selectedIndex: null,
   mode: 'grid',
+  uiTheme: readStoredUiTheme(),
   showFilmstrip: true,
   showInfo: true,
   search: '',
   activeTags: [],
   includeSubfolders: false,
-  material: 'matte',
+  material: 'clay',
+  thumbnailPreset: readStoredThumbnailPreset(),
+  cameraMode: readStoredCameraMode(),
+  settingsOpen: false,
   lighting: 'studio',
   lightIntensity: 1,
-  baseColor: '#b0b6be',
+  baseColor: DEFAULT_BASE_COLOR,
   background: 'dark',
   showGrid: false,
   autoRotate: false,
@@ -114,6 +177,17 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
 
   setMode: (m) => set({ mode: m }),
+  toggleUiTheme: () =>
+    set((s) => {
+      const next: UiTheme = s.uiTheme === 'dark' ? 'light' : 'dark'
+      try {
+        localStorage.setItem(UI_THEME_STORAGE_KEY, next)
+      } catch {
+        // Storage may be unavailable -- the toggle still applies for the
+        // current session, it just won't survive a restart.
+      }
+      return { uiTheme: next }
+    }),
   toggleFilmstrip: () => set((s) => ({ showFilmstrip: !s.showFilmstrip })),
   toggleInfo: () => set((s) => ({ showInfo: !s.showInfo })),
   setSearch: (s) => set({ search: s }),
@@ -124,6 +198,28 @@ export const useUiStore = create<UiState>((set, get) => ({
   })),
   setIncludeSubfolders: (b) => set({ includeSubfolders: b }),
   setMaterial: (preset) => set({ material: preset }),
+  setThumbnailPreset: (preset) =>
+    set(() => {
+      try {
+        localStorage.setItem(THUMBNAIL_PRESET_STORAGE_KEY, preset)
+      } catch {
+        // Storage may be unavailable -- the choice still applies for the
+        // current session, it just won't survive a restart.
+      }
+      return { thumbnailPreset: preset }
+    }),
+  setCameraMode: (mode) =>
+    set(() => {
+      try {
+        localStorage.setItem(CAMERA_MODE_STORAGE_KEY, mode)
+      } catch {
+        // Storage may be unavailable -- the choice still applies for the
+        // current session, it just won't survive a restart.
+      }
+      return { cameraMode: mode }
+    }),
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
   setLighting: (preset) => set({ lighting: preset }),
   setLightIntensity: (n) => set({ lightIntensity: n }),
   setBaseColor: (s) => set({ baseColor: s }),

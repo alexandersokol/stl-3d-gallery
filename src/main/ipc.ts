@@ -49,13 +49,13 @@ export function registerIpc(): void {
     return writeMetadata(model, data)
   })
 
-  ipcMain.handle('readThumbnail', async (_e, model: string) => {
-    const buf = await readThumbnail(model)
+  ipcMain.handle('readThumbnail', async (_e, model: string, preset: string) => {
+    const buf = await readThumbnail(model, preset)
     return buf ? toArrayBuffer(buf) : null
   })
 
-  ipcMain.handle('writeThumbnail', async (_e, model: string, png: ArrayBuffer) => {
-    await writeThumbnail(model, Buffer.from(png))
+  ipcMain.handle('writeThumbnail', async (_e, model: string, preset: string, png: ArrayBuffer) => {
+    await writeThumbnail(model, preset, Buffer.from(png))
   })
 
   ipcMain.handle('readLinkedImage', async (_e, model: string) => {

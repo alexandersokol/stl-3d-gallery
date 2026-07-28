@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { FileEntry, Metadata, ModelStats, ScanResult } from '../../shared/types'
+import { DEFAULT_BASE_COLOR } from '../viewer/materials'
 
 const files: FileEntry[] = [
   { path: '/x/a.stl', name: 'a.stl', size: 1, mtimeMs: 1 },
@@ -32,16 +33,20 @@ describe('useUiStore', () => {
     expect(s.search).toBe('')
     expect(s.activeTags).toEqual([])
     expect(s.includeSubfolders).toBe(false)
-    expect(s.material).toBe('matte')
+    expect(s.material).toBe('clay')
+    expect(s.thumbnailPreset).toBe('clay')
+    expect(s.cameraMode).toBe('fly')
+    expect(s.settingsOpen).toBe(false)
     expect(s.lighting).toBe('studio')
     expect(s.lightIntensity).toBe(1)
-    expect(s.baseColor).toBe('#b0b6be')
+    expect(s.baseColor).toBe(DEFAULT_BASE_COLOR)
     expect(s.background).toBe('dark')
     expect(s.showGrid).toBe(false)
     expect(s.autoRotate).toBe(false)
     expect(s.currentStats).toBeNull()
     expect(s.metaByPath).toEqual({})
     expect(s.resetCameraSignal).toBe(0)
+    expect(s.uiTheme).toBe('dark')
   })
 
   it('openFolder scans, sets cwd/scan, and resets selection/search/tags', async () => {
@@ -137,6 +142,40 @@ describe('useUiStore', () => {
     expect(useUiStore.getState().lighting).toBe('dramatic')
   })
 
+  it('setThumbnailPreset defaults to clay, updates the field, and persists the choice to localStorage', () => {
+    expect(useUiStore.getState().thumbnailPreset).toBe('clay')
+
+    useUiStore.getState().setThumbnailPreset('ceramic')
+    expect(useUiStore.getState().thumbnailPreset).toBe('ceramic')
+    expect(localStorage.getItem('stl-gallery:thumbnailPreset')).toBe('ceramic')
+
+    useUiStore.getState().setThumbnailPreset('clay')
+    expect(useUiStore.getState().thumbnailPreset).toBe('clay')
+    expect(localStorage.getItem('stl-gallery:thumbnailPreset')).toBe('clay')
+  })
+
+  it('setCameraMode defaults to fly, updates the field, and persists the choice to localStorage', () => {
+    expect(useUiStore.getState().cameraMode).toBe('fly')
+
+    useUiStore.getState().setCameraMode('surface')
+    expect(useUiStore.getState().cameraMode).toBe('surface')
+    expect(localStorage.getItem('stl-gallery:cameraMode')).toBe('surface')
+
+    useUiStore.getState().setCameraMode('fly')
+    expect(useUiStore.getState().cameraMode).toBe('fly')
+    expect(localStorage.getItem('stl-gallery:cameraMode')).toBe('fly')
+  })
+
+  it('openSettings/closeSettings toggle settingsOpen', () => {
+    expect(useUiStore.getState().settingsOpen).toBe(false)
+
+    useUiStore.getState().openSettings()
+    expect(useUiStore.getState().settingsOpen).toBe(true)
+
+    useUiStore.getState().closeSettings()
+    expect(useUiStore.getState().settingsOpen).toBe(false)
+  })
+
   it('setLightIntensity, setBaseColor, setBackground behave as simple setters', () => {
     useUiStore.getState().setLightIntensity(1.5)
     expect(useUiStore.getState().lightIntensity).toBe(1.5)
@@ -177,6 +216,18 @@ describe('useUiStore', () => {
 
     useUiStore.getState().setCurrentStats(null)
     expect(useUiStore.getState().currentStats).toBeNull()
+  })
+
+  it('toggleUiTheme flips uiTheme and persists the choice to localStorage', () => {
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+
+    useUiStore.getState().toggleUiTheme()
+    expect(useUiStore.getState().uiTheme).toBe('light')
+    expect(localStorage.getItem('stl-gallery:uiTheme')).toBe('light')
+
+    useUiStore.getState().toggleUiTheme()
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+    expect(localStorage.getItem('stl-gallery:uiTheme')).toBe('dark')
   })
 
   it('setMeta stores metadata keyed by path, without clobbering other paths', () => {

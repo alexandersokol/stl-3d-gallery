@@ -9,6 +9,7 @@ import ModelTile from './ModelTile'
 export default function Filmstrip() {
   const scan = useUiStore((s) => s.scan)
   const selectedIndex = useUiStore((s) => s.selectedIndex)
+  const thumbnailPreset = useUiStore((s) => s.thumbnailPreset)
 
   if (!scan) return null
 
@@ -20,7 +21,9 @@ export default function Filmstrip() {
           role="listitem"
           className={i === selectedIndex ? 'filmstrip-item filmstrip-item-active' : 'filmstrip-item'}
         >
-          <ModelTile file={file} />
+          {/* Keyed on preset too, same as GridView, so filmstrip thumbnails
+              regenerate when the Settings screen's thumbnail preset changes. */}
+          <ModelTile key={`${file.path}::${thumbnailPreset}`} file={file} />
         </div>
       ))}
     </div>

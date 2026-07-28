@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor, act } from '@testing-library/react'
 import type { FileEntry, ModelStats, ScanResult } from '../../shared/types'
+import { DEFAULT_BASE_COLOR } from '../viewer/materials'
 
 const file: FileEntry = { path: '/root/a.stl', name: 'a.stl', size: 100, mtimeMs: 1 }
 const scanResult: ScanResult = { folders: [], files: [file] }
@@ -26,6 +27,7 @@ class MockSceneManager {
   setMaterial = vi.fn()
   setLighting = vi.fn()
   setBackground = vi.fn()
+  setCameraMode = vi.fn()
   setGrid = vi.fn()
   setAutoRotate = vi.fn()
   resetCamera = vi.fn()
@@ -87,11 +89,29 @@ describe('<Viewer/>', () => {
     const sm = MockSceneManager.instances[0]
     await waitFor(() => expect(sm.setModel).toHaveBeenCalled())
 
-    expect(sm.setMaterial).toHaveBeenCalledWith('matte', '#b0b6be')
+    expect(sm.setMaterial).toHaveBeenCalledWith('clay', DEFAULT_BASE_COLOR)
     expect(sm.setLighting).toHaveBeenCalledWith('studio', 1)
     expect(sm.setBackground).toHaveBeenCalledWith('dark')
+    expect(sm.setCameraMode).toHaveBeenCalledWith('fly')
     expect(sm.setGrid).toHaveBeenCalledWith(false)
     expect(sm.setAutoRotate).toHaveBeenCalledWith(false)
+  })
+
+  it('calls setCameraMode when cameraMode changes in the store', async () => {
+    render(<Viewer />)
+    const sm = MockSceneManager.instances[0]
+    await waitFor(() => expect(sm.setModel).toHaveBeenCalled())
+    sm.setCameraMode.mockClear()
+
+    act(() => {
+      useUiStore.getState().setCameraMode('surface')
+    })
+    await waitFor(() => expect(sm.setCameraMode).toHaveBeenCalledWith('surface'))
+
+    act(() => {
+      useUiStore.getState().setCameraMode('fly')
+    })
+    await waitFor(() => expect(sm.setCameraMode).toHaveBeenCalledWith('fly'))
   })
 
   it('calls setMaterial when material or baseColor change in the store', async () => {
@@ -103,7 +123,7 @@ describe('<Viewer/>', () => {
     act(() => {
       useUiStore.getState().setMaterial('metal')
     })
-    await waitFor(() => expect(sm.setMaterial).toHaveBeenCalledWith('metal', '#b0b6be'))
+    await waitFor(() => expect(sm.setMaterial).toHaveBeenCalledWith('metal', DEFAULT_BASE_COLOR))
 
     act(() => {
       useUiStore.getState().setBaseColor('#ff0000')

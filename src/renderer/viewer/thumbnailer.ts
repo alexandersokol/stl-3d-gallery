@@ -11,6 +11,8 @@
 
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { DEFAULT_BASE_COLOR, makeMaterial, type MaterialPreset } from './materials'
+import { makeMatcaps } from './matcaps'
 
 const DEFAULT_SIZE = 256
 const BACKGROUND_FILL_FRACTION = 0.85 // model should fill ~85% of the frame
@@ -23,6 +25,10 @@ interface RendererState {
   envMap: THREE.Texture
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
+  // Built once and reused across calls -- the 'ceramic' preset needs a
+  // matcap texture, and generating one involves a throwaway <canvas> 2D
+  // draw (see matcaps.ts) that's wasteful to repeat on every thumbnail.
+  matcaps: Record<'clay' | 'ceramic', THREE.Texture>
 }
 
 let state: RendererState | null = null
@@ -69,8 +75,15 @@ function getState(): RendererState {
   scene.add(key)
 
   const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100)
+  // STL files use the Z-up convention (Blender / 3D-printing). Match the
+  // live viewer's camera orientation (see cameraControls.ts) so a model's
+  // thumbnail shows it standing upright, the same way it appears when
+  // opened in the viewer.
+  camera.up.set(0, 0, 1)
 
-  state = { renderer, canvas, envMap, scene, camera }
+  const matcaps = makeMatcaps()
+
+  state = { renderer, canvas, envMap, scene, camera, matcaps }
   return state
 }
 
@@ -89,7 +102,8 @@ function toBlob(canvas: RenderTarget): Promise<Blob> {
 /**
  * Renders raw triangle-soup vertex positions (as produced by loadModel) to a
  * square, transparent-background PNG thumbnail on a shared offscreen
- * WebGL context.
+ * WebGL context, using the given material preset (independent of whatever
+ * material the live 3D preview happens to be using).
  *
  * The actual render body (doRenderThumbnail) mutates module-level shared
  * state (scene/camera/canvas) and awaits an async toBlob() call partway
@@ -101,8 +115,12 @@ function toBlob(canvas: RenderTarget): Promise<Blob> {
  * waits for the previous one to fully settle (including its async toBlob)
  * before starting.
  */
-async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): Promise<Blob> {
-  const { renderer, canvas, scene, camera } = getState()
+async function doRenderThumbnail(
+  positions: Float32Array,
+  preset: MaterialPreset,
+  size = DEFAULT_SIZE,
+): Promise<Blob> {
+  const { renderer, canvas, scene, camera, matcaps } = getState()
 
   renderer.setSize(size, size, false)
   camera.aspect = 1
@@ -112,11 +130,12 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
   geometry.computeVertexNormals()
   geometry.computeBoundingSphere()
 
-  const material = new THREE.MeshStandardMaterial({
-    color: 0xb0b6be,
-    roughness: 0.85,
-    metalness: 0.0,
-  })
+  // Same material factory the live viewer uses (materials.ts), so a
+  // thumbnail rendered with a given preset matches what that preset looks
+  // like in the viewer. `normals`/`wireframe` don't respond to the scene's
+  // lighting/env at all -- that's fine, the lighting rig below is simply
+  // ignored by those materials.
+  const material = makeMaterial(preset, DEFAULT_BASE_COLOR, matcaps)
 
   const mesh = new THREE.Mesh(geometry, material)
   scene.add(mesh)
@@ -126,16 +145,22 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
     const center = sphere.center
     const radius = sphere.radius > 0 ? sphere.radius : 1
 
-    // Fixed pleasant 3/4 view: offset along +x/+y/+z from the model center,
-    // then pull back along that direction until the bounding sphere fits
-    // within BACKGROUND_FILL_FRACTION of the vertical frame.
-    const dir = new THREE.Vector3(1, 0.75, 1).normalize()
+    // Fixed pleasant 3/4 view in Z-up space (+X right, -Y toward the
+    // viewer/front, +Z up) — the SAME direction used by cameraControls.ts's
+    // fitCameraToObject, so a model's thumbnail matches its orientation in
+    // the live viewer. Offset along this direction from the model center,
+    // then pull back until the bounding sphere fits within
+    // BACKGROUND_FILL_FRACTION of the vertical frame.
+    const dir = new THREE.Vector3(1, -1, 0.75).normalize()
     const vFov = (camera.fov * Math.PI) / 180
     const distanceForFit = radius / (Math.sin(vFov / 2) * BACKGROUND_FILL_FRACTION)
 
     camera.position.copy(center).addScaledVector(dir, distanceForFit)
-    camera.near = Math.max(distanceForFit - radius * 2, 0.01)
-    camera.far = distanceForFit + radius * 2
+    // Wrap near/far tightly around the framed model (single static shot, so
+    // this only needs to be set once here, not per-frame like the live
+    // viewer) so the thumbnail never clips the model at either plane.
+    camera.near = Math.max(distanceForFit - radius * 1.1, radius * 0.002)
+    camera.far = distanceForFit + radius * 1.5
     camera.lookAt(center)
     camera.updateProjectionMatrix()
 
@@ -153,8 +178,12 @@ async function doRenderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): 
 // doc comment above for why this is necessary.
 let renderQueue: Promise<unknown> = Promise.resolve()
 
-export function renderThumbnail(positions: Float32Array, size = DEFAULT_SIZE): Promise<Blob> {
-  const result = renderQueue.then(() => doRenderThumbnail(positions, size))
+export function renderThumbnail(
+  positions: Float32Array,
+  preset: MaterialPreset,
+  size = DEFAULT_SIZE,
+): Promise<Blob> {
+  const result = renderQueue.then(() => doRenderThumbnail(positions, preset, size))
   // Keep the chain alive even if a render rejects, so one failure doesn't
   // wedge the queue for subsequent calls. The returned `result` promise
   // still rejects to the caller.

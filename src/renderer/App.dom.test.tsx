@@ -101,6 +101,7 @@ class MockSceneManager {
   setMaterial = vi.fn()
   setLighting = vi.fn()
   setBackground = vi.fn()
+  setCameraMode = vi.fn()
   setGrid = vi.fn()
   setAutoRotate = vi.fn()
   resetCamera = vi.fn()
@@ -272,6 +273,41 @@ describe('<App/>', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
     expect(container.querySelector('.grid-view')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /reset camera/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('<App/> UI theme toggle', () => {
+  it('renders a "Toggle theme" button that flips uiTheme and stamps documentElement[data-theme]', async () => {
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+    const toggleButton = screen.getByRole('button', { name: 'Toggle theme' })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+
+    fireEvent.click(toggleButton)
+
+    expect(useUiStore.getState().uiTheme).toBe('light')
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'))
+
+    fireEvent.click(toggleButton)
+    expect(useUiStore.getState().uiTheme).toBe('dark')
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'dark'))
+  })
+})
+
+describe('<App/> settings', () => {
+  it('renders a Settings gear button that opens the settings modal', async () => {
+    await useUiStore.getState().openFolder('/root')
+    render(<App />)
+
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument()
+
+    const settingsButton = screen.getByRole('button', { name: 'Settings' })
+    fireEvent.click(settingsButton)
+
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
+    expect(useUiStore.getState().settingsOpen).toBe(true)
   })
 })
 

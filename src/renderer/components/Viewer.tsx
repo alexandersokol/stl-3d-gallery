@@ -27,6 +27,7 @@ export default function Viewer() {
   const lighting = useUiStore((s) => s.lighting)
   const lightIntensity = useUiStore((s) => s.lightIntensity)
   const background = useUiStore((s) => s.background)
+  const cameraMode = useUiStore((s) => s.cameraMode)
   const showGrid = useUiStore((s) => s.showGrid)
   const autoRotate = useUiStore((s) => s.autoRotate)
   const setCurrentStats = useUiStore((s) => s.setCurrentStats)
@@ -68,6 +69,10 @@ export default function Viewer() {
   useEffect(() => {
     sceneRef.current?.setBackground(background)
   }, [background])
+
+  useEffect(() => {
+    sceneRef.current?.setCameraMode(cameraMode)
+  }, [cameraMode])
 
   useEffect(() => {
     sceneRef.current?.setGrid(showGrid)

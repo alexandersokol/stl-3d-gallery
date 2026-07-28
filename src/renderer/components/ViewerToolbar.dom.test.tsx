@@ -13,14 +13,14 @@ describe('<ViewerToolbar/>', () => {
   it('clicking a material preset button calls setMaterial and marks it active', () => {
     render(<ViewerToolbar />)
 
-    expect(screen.getByRole('button', { name: 'matte' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'clay' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'metal' })).toHaveAttribute('aria-pressed', 'false')
 
     fireEvent.click(screen.getByRole('button', { name: 'metal' }))
 
     expect(useUiStore.getState().material).toBe('metal')
     expect(screen.getByRole('button', { name: 'metal' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'matte' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'clay' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('changing the base color input calls setBaseColor', () => {

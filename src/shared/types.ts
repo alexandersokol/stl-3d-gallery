@@ -12,8 +12,8 @@ export interface Api {
   readMetadata(model: string): Promise<Metadata | null>
   readMetadataBatch(paths: string[]): Promise<Record<string, Metadata>>
   writeMetadata(model: string, data: Partial<Metadata>): Promise<Metadata>
-  readThumbnail(model: string): Promise<ArrayBuffer | null>
-  writeThumbnail(model: string, png: ArrayBuffer): Promise<void>
+  readThumbnail(model: string, preset: string): Promise<ArrayBuffer | null>
+  writeThumbnail(model: string, preset: string, png: ArrayBuffer): Promise<void>
   readLinkedImage(model: string): Promise<{ bytes: ArrayBuffer; name: string } | null>
   writeLinkedImage(model: string, bytes: ArrayBuffer, ext: string): Promise<string>
   removeLinkedImage(model: string): Promise<void>
