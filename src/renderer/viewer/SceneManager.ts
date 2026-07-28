@@ -72,7 +72,7 @@ export class SceneManager {
   private lights: THREE.Light[] = []
   private gridHelper: THREE.GridHelper | null = null
 
-  private materialPreset: MaterialPreset = 'matte'
+  private materialPreset: MaterialPreset = 'clay'
   private baseColor = DEFAULT_BASE_COLOR
   private lightPreset: LightPreset = 'studio'
   private lightIntensity = 1

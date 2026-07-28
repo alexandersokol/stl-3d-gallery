@@ -33,7 +33,7 @@ describe('useUiStore', () => {
     expect(s.search).toBe('')
     expect(s.activeTags).toEqual([])
     expect(s.includeSubfolders).toBe(false)
-    expect(s.material).toBe('matte')
+    expect(s.material).toBe('clay')
     expect(s.lighting).toBe('studio')
     expect(s.lightIntensity).toBe(1)
     expect(s.baseColor).toBe(DEFAULT_BASE_COLOR)

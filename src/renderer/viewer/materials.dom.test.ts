@@ -9,9 +9,10 @@ const matcaps: Record<'clay' | 'ceramic', THREE.Texture> = {
 }
 
 describe('MATERIAL_PRESETS', () => {
-  it('lists all seven presets in order', () => {
-    const expected: MaterialPreset[] = ['matte', 'glossy', 'metal', 'clay', 'ceramic', 'wireframe', 'normals']
+  it('lists all seven presets in order, clay first', () => {
+    const expected: MaterialPreset[] = ['clay', 'matte', 'glossy', 'metal', 'ceramic', 'wireframe', 'normals']
     expect(MATERIAL_PRESETS).toEqual(expected)
+    expect(MATERIAL_PRESETS[0]).toBe('clay')
     expect(MATERIAL_PRESETS).toHaveLength(7)
   })
 })
@@ -42,10 +43,13 @@ describe('makeMaterial', () => {
     expect(std.metalness).toBe(1)
   })
 
-  it('clay -> MeshMatcapMaterial using the clay matcap texture', () => {
-    const m = makeMaterial('clay', '#fff', matcaps)
-    expect(m).toBeInstanceOf(THREE.MeshMatcapMaterial)
-    expect((m as THREE.MeshMatcapMaterial).matcap).toBe(matcaps.clay)
+  it('clay -> MeshStandardMaterial with medium roughness, no metalness (studio clay)', () => {
+    const m = makeMaterial('clay', DEFAULT_BASE_COLOR, matcaps)
+    expect(m).toBeInstanceOf(THREE.MeshStandardMaterial)
+    const std = m as THREE.MeshStandardMaterial
+    expect(std.roughness).toBe(0.7)
+    expect(std.metalness).toBe(0)
+    expect(std.color.getHexString()).toBe(DEFAULT_BASE_COLOR.replace('#', ''))
   })
 
   it('ceramic -> MeshMatcapMaterial using the ceramic matcap texture', () => {
