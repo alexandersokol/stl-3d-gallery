@@ -3,27 +3,18 @@ import type { Metadata, ModelStats, ScanResult } from '../../shared/types'
 import { api } from '../ipc/api'
 import { DEFAULT_BASE_COLOR, type MaterialPreset } from '../viewer/materials'
 import type { LightPreset } from '../viewer/lighting'
+import { UI_THEME_STORAGE_KEY, readStoredUiTheme, type UiTheme } from '../theme'
 
+export type { UiTheme }
 export type Mode = 'grid' | 'viewer'
-export type UiTheme = 'light' | 'dark'
 
 // Persists the app-chrome theme (panels/bars/cards -- NOT the viewer's
 // scene background, which is the separate `background` field below) across
 // restarts. Read synchronously at module load so the store's initial state
-// already reflects the user's last choice -- App.tsx's effect that stamps
-// documentElement[data-theme] then only has to run once on mount for the
-// common case, minimizing any dark->light flash.
-const UI_THEME_STORAGE_KEY = 'stl-gallery:uiTheme'
-
-function readStoredUiTheme(): UiTheme {
-  try {
-    return localStorage.getItem(UI_THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
-  } catch {
-    // localStorage can throw (e.g. disabled storage) -- fall back to the
-    // shipped default rather than letting theme init crash the app.
-    return 'dark'
-  }
-}
+// already reflects the user's last choice. The key/read logic lives in
+// ../theme (shared with main.tsx's pre-mount `applyStoredThemeSync`, which
+// stamps documentElement[data-theme] before first paint) -- they must stay
+// in lockstep, hence the shared helper rather than a second copy here.
 
 export interface UiState {
   cwd: string | null

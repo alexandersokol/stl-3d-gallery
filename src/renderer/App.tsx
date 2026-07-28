@@ -47,10 +47,11 @@ export default function App() {
   useOpenFile()
 
   // Stamps the app-chrome theme onto <html> so app.css's
-  // `:root[data-theme="..."]` token blocks apply. `uiTheme` already starts
-  // from localStorage (see store.ts), so this only matters for keeping the
-  // attribute in sync when the user toggles -- the initial paint is already
-  // correct without waiting for this effect to run.
+  // `:root[data-theme="..."]` token blocks apply. The initial paint is
+  // already correct because main.tsx's `applyStoredThemeSync()` sets the
+  // attribute synchronously before this component ever mounts (see
+  // ../theme.ts) -- this effect only has to keep the attribute in sync when
+  // the user toggles afterward.
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', uiTheme)
   }, [uiTheme])
