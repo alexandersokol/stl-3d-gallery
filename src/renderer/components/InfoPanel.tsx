@@ -20,6 +20,7 @@ import {
   ContentCopyIcon,
   DriveFileMoveIcon,
   DeleteIcon,
+  OpenInNewIcon,
 } from '../assets/icons'
 
 const SAVE_DEBOUNCE_MS = 500
@@ -65,6 +66,7 @@ export default function InfoPanel() {
   const setMeta = useUiStore((s) => s.setMeta)
   const beginFileAction = useUiStore((s) => s.beginFileAction)
   const moveFile = useUiStore((s) => s.moveFile)
+  const openInBlender = useUiStore((s) => s.openInBlender)
 
   const file = scan !== null && selectedIndex !== null ? (scan.files[selectedIndex] ?? null) : null
 
@@ -175,6 +177,15 @@ export default function InfoPanel() {
               {file.path}
             </p>
             <div className="info-actions" role="group" aria-label="File actions">
+              <button
+                type="button"
+                className="info-action-btn"
+                aria-label="Open in Blender"
+                title="Open in Blender"
+                onClick={() => void openInBlender(file.path)}
+              >
+                <OpenInNewIcon size={18} />
+              </button>
               <button
                 type="button"
                 className="info-action-btn"

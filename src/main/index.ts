@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { createWindow } from './window'
 import { registerIpc } from './ipc'
+import { findStlArg } from './startup-args'
 
 let mainWindow: BrowserWindow | null = null
 let rendererReady = false
@@ -37,16 +38,33 @@ app.on('open-file', (e, filePath) => {
   sendOpenFile(filePath)
 })
 
+// One app instance at a time. Without this, opening another .stl from
+// Explorer while the app runs (Windows/Linux file association) launches a
+// second, separate app. Instead the second launch quits immediately and its
+// argv is forwarded here, so the running window opens that file.
+const isPrimaryInstance = app.requestSingleInstanceLock()
+if (!isPrimaryInstance) {
+  app.quit()
+} else {
+  app.on('second-instance', (_e, argv) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+    const stl = findStlArg(argv)
+    if (stl) sendOpenFile(stl)
+  })
+}
+
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return // quitting; don't flash a window
   registerIpc()
   attachWindow(createWindow())
 
-  // Windows/Linux: launched via file association, the path arrives as the
-  // last CLI argument rather than an 'open-file' event.
-  const argPath = process.argv[process.argv.length - 1]
-  if (process.platform !== 'darwin' && argPath && argPath.toLowerCase().endsWith('.stl')) {
-    sendOpenFile(argPath)
-  }
+  // Windows/Linux: launched via file association, the path arrives as a CLI
+  // argument rather than an 'open-file' event.
+  const argPath = process.platform !== 'darwin' ? findStlArg(process.argv) : null
+  if (argPath) sendOpenFile(argPath)
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) attachWindow(createWindow()) })
 })

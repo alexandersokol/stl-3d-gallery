@@ -11,11 +11,13 @@ import {
   ContentCopyIcon,
   DriveFileMoveIcon,
   DeleteIcon,
+  OpenInNewIcon,
 } from '../assets/icons'
 
 export default function FileActionsMenu({ path }: { path: string }) {
   const beginFileAction = useUiStore((s) => s.beginFileAction)
   const moveFile = useUiStore((s) => s.moveFile)
+  const openInBlender = useUiStore((s) => s.openInBlender)
 
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -61,6 +63,10 @@ export default function FileActionsMenu({ path }: { path: string }) {
 
       {open && (
         <div className="file-menu" role="menu">
+          <button type="button" role="menuitem" className="file-menu-item" onClick={run(() => void openInBlender(path))}>
+            <OpenInNewIcon size={16} />
+            Open in Blender
+          </button>
           <button type="button" role="menuitem" className="file-menu-item" onClick={run(() => beginFileAction('rename', path))}>
             <EditIcon size={16} />
             Rename

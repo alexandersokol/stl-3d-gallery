@@ -1,6 +1,6 @@
 // Renders the active file-operation dialog (driven by the store's
 // `fileAction`) plus a dismissible error toast for operations that have no
-// dialog to show their error (Move). Mounted once, at App level, so the same
+// dialog to show their error (Move, Open in Blender). Mounted once, at App level, so the same
 // dialog serves both entry points (viewer info-pane buttons and grid tile
 // menus) and the F2 / Delete shortcuts.
 
@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useUiStore } from '../state/store'
 import { validateStlFilename } from '../../shared/filename'
 import { CloseIcon } from '../assets/icons'
+import { ipcErrorMessage } from '../lib/ipc-error'
 
 function baseName(p: string): string {
   return p.split(/[\\/]/).pop() ?? p
@@ -59,9 +60,9 @@ function NameDialog({
       if (kind === 'rename') await confirmRename(value.trim())
       else await confirmCopy(value.trim())
       // On success the store clears `fileAction`, unmounting this dialog.
-    } catch (err: any) {
+    } catch (err) {
       setBusy(false)
-      setError(err?.message ?? 'Operation failed.')
+      setError(ipcErrorMessage(err, 'Operation failed.'))
     }
   }
 
@@ -135,15 +136,18 @@ function DeleteDialog({ path }: { path: string }) {
     setError(null)
     try {
       await confirmDelete()
-    } catch (err: any) {
+    } catch (err) {
       setBusy(false)
-      setError(err?.message ?? 'Delete failed.')
+      setError(ipcErrorMessage(err, 'Delete failed.'))
     }
   }
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeFileAction()
+      if (e.key === 'Escape') {
+        e.preventDefault() // tells App's global shortcuts this Esc is handled
+        closeFileAction()
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)

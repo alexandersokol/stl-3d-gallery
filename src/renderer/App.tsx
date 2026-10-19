@@ -73,9 +73,15 @@ export default function App() {
   // per mount instead of being torn down/re-added on every store change.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isTypingTarget(e.target)) return
+      if (isTypingTarget(e.target) || e.defaultPrevented) return
 
       const state = useUiStore.getState()
+      // A modal (Settings, or a rename/copy/delete dialog) owns the keyboard
+      // while it's open: Esc must only close it (not also leave the viewer),
+      // and nothing should navigate or toggle panels behind it. The modals
+      // also preventDefault() their Esc, which covers the case where their
+      // listener runs first and has already closed the modal by now.
+      if (state.settingsOpen || state.fileAction) return
 
       switch (e.key) {
         case 'ArrowRight':

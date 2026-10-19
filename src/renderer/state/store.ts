@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Metadata, ModelStats, ScanResult } from '../../shared/types'
 import { api } from '../ipc/api'
+import { ipcErrorMessage } from '../lib/ipc-error'
 import { DEFAULT_BASE_COLOR, MATERIAL_PRESETS, type MaterialPreset } from '../viewer/materials'
 import type { LightPreset } from '../viewer/lighting'
 import { UI_THEME_STORAGE_KEY, readStoredUiTheme, type UiTheme } from '../theme'
@@ -48,6 +49,18 @@ function readStoredCameraMode(): CameraMode {
   }
 }
 
+// Optional Blender executable override (Settings). Empty string means
+// auto-detect in the main process (see main/blender.ts findBlender).
+const BLENDER_PATH_STORAGE_KEY = 'stl-gallery:blenderPath'
+
+function readStoredBlenderPath(): string {
+  try {
+    return localStorage.getItem(BLENDER_PATH_STORAGE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
 export interface UiState {
   cwd: string | null
   scan: ScanResult | null
@@ -70,6 +83,8 @@ export interface UiState {
   // the model's surface. Defaults to 'fly' and persists to localStorage.
   // Driven into the live SceneManager by Viewer.tsx.
   cameraMode: CameraMode
+  // Blender executable override from Settings; '' = auto-detect.
+  blenderPath: string
   // Whether the Settings modal (SettingsModal.tsx) is currently open.
   settingsOpen: boolean
   lighting: LightPreset
@@ -112,6 +127,7 @@ export interface UiState {
   setMaterial(preset: MaterialPreset): void
   setThumbnailPreset(preset: MaterialPreset): void
   setCameraMode(mode: CameraMode): void
+  setBlenderPath(path: string): void
   openSettings(): void
   closeSettings(): void
   setLighting(preset: LightPreset): void
@@ -134,6 +150,9 @@ export interface UiState {
   confirmRename(newName: string): Promise<void>
   confirmCopy(newName: string): Promise<void>
   confirmDelete(): Promise<void>
+  // Launches Blender with the model imported; a failure (not installed, bad
+  // override path) is surfaced via fileActionError like a failed Move.
+  openInBlender(path: string): Promise<void>
   // Refresh the folder and switch the viewer to a just-written model (the
   // repaired `-fixed.stl` produced by the Mesh Repair panel).
   openRepairedFile(path: string): Promise<void>
@@ -153,6 +172,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   material: 'studio',
   thumbnailPreset: readStoredThumbnailPreset(),
   cameraMode: readStoredCameraMode(),
+  blenderPath: readStoredBlenderPath(),
   settingsOpen: false,
   lighting: 'studio',
   lightIntensity: 1,
@@ -243,6 +263,16 @@ export const useUiStore = create<UiState>((set, get) => ({
       }
       return { cameraMode: mode }
     }),
+  setBlenderPath: (path) =>
+    set(() => {
+      try {
+        localStorage.setItem(BLENDER_PATH_STORAGE_KEY, path)
+      } catch {
+        // Storage may be unavailable -- the choice still applies for the
+        // current session, it just won't survive a restart.
+      }
+      return { blenderPath: path }
+    }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
   setLighting: (preset) => set({ lighting: preset }),
@@ -296,8 +326,16 @@ export const useUiStore = create<UiState>((set, get) => ({
       const res = await api.moveModel(path)
       if (!res) return // user canceled the native folder picker
       await rescanAfterRemoval()
-    } catch (err: any) {
-      set({ fileActionError: err?.message ?? 'Move failed.' })
+    } catch (err) {
+      set({ fileActionError: ipcErrorMessage(err, 'Move failed.') })
+    }
+  },
+
+  openInBlender: async (path) => {
+    try {
+      await api.openInBlender(path, get().blenderPath.trim() || null)
+    } catch (err) {
+      set({ fileActionError: ipcErrorMessage(err, 'Could not open Blender.') })
     }
   },
 

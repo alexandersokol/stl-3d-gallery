@@ -55,6 +55,12 @@ export interface Api {
   // Writes repaired STL bytes to a collision-safe sibling of `model` named
   // `<name>-fixed.stl` (or `-fixed-2.stl`, …). Returns the new path.
   writeStlFile(model: string, bytes: ArrayBuffer): Promise<FileOpResult>
+  // Launches Blender with the model imported (mm units, default scene kept).
+  // `blenderPath` is the Settings override; null auto-detects. Rejects with a
+  // user-facing message if Blender can't be found or started.
+  openInBlender(model: string, blenderPath: string | null): Promise<void>
+  // The auto-detected Blender executable, or null if none is installed.
+  detectBlender(): Promise<string | null>
   getLastFolder(): Promise<string | null>
   setLastFolder(dir: string): Promise<void>
   onOpenFile(cb: (path: string) => void): void

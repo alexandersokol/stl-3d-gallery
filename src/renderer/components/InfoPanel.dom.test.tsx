@@ -19,8 +19,10 @@ const writeMetadata = vi.fn()
 const readLinkedImage = vi.fn()
 const writeLinkedImage = vi.fn()
 const removeLinkedImage = vi.fn()
+const openInBlender = vi.fn()
 vi.mock('../ipc/api', () => ({
   api: {
+    openInBlender: (...args: unknown[]) => openInBlender(...args),
     readMetadata: (...args: unknown[]) => readMetadata(...args),
     writeMetadata: (...args: unknown[]) => writeMetadata(...args),
     readLinkedImage: (...args: unknown[]) => readLinkedImage(...args),
@@ -44,6 +46,7 @@ beforeEach(() => {
   readLinkedImage.mockResolvedValue(null)
   writeLinkedImage.mockReset()
   removeLinkedImage.mockReset()
+  openInBlender.mockReset().mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -216,5 +219,12 @@ describe('<InfoPanel/>', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('Open in Blender launches Blender for the selected model', () => {
+    useUiStore.setState({ scan: scanResult, selectedIndex: 0 })
+    render(<InfoPanel />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open in Blender' }))
+    expect(openInBlender).toHaveBeenCalledWith(file.path, null)
   })
 })

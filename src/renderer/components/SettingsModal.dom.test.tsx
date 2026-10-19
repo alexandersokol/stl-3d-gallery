@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+
+const detectBlender = vi.fn()
+vi.mock('../ipc/api', () => ({ api: { detectBlender: (...a: unknown[]) => detectBlender(...a) } }))
 
 const { useUiStore } = await import('../state/store')
 const { default: SettingsModal } = await import('./SettingsModal')
 
 beforeEach(() => {
   useUiStore.setState(useUiStore.getInitialState())
+  detectBlender.mockReset().mockResolvedValue('/Applications/Blender.app/Contents/MacOS/Blender')
 })
 
 describe('<SettingsModal/>', () => {
@@ -73,5 +77,19 @@ describe('<SettingsModal/>', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(useUiStore.getState().settingsOpen).toBe(false)
+  })
+
+  it('shows the auto-detected Blender as the path placeholder', async () => {
+    useUiStore.setState({ settingsOpen: true })
+    render(<SettingsModal />)
+    const input = screen.getByLabelText('Blender executable')
+    expect(await screen.findByPlaceholderText('/Applications/Blender.app/Contents/MacOS/Blender')).toBe(input)
+  })
+
+  it('editing the Blender path updates the store', () => {
+    useUiStore.setState({ settingsOpen: true })
+    render(<SettingsModal />)
+    fireEvent.change(screen.getByLabelText('Blender executable'), { target: { value: '/opt/blender' } })
+    expect(useUiStore.getState().blenderPath).toBe('/opt/blender')
   })
 })

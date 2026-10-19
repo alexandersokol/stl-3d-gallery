@@ -5,6 +5,7 @@ import { readMetadata, writeMetadata, readMetadataBatch } from './metadata-store
 import { readThumbnail, writeThumbnail } from './thumbnail-cache'
 import { readLinkedImage, writeLinkedImage, removeLinkedImage } from './linked-image-store'
 import { renameModel, copyModel, moveModel, deleteModel, writeRepairedModel } from './file-ops'
+import { openInBlender, findBlender } from './blender'
 import { appState } from './app-state'
 import path from 'path'
 import { parseStartupFolder } from './startup-args'
@@ -99,6 +100,14 @@ export function registerIpc(): void {
 
   ipcMain.handle('writeStlFile', async (_e, model: string, bytes: ArrayBuffer) => {
     return writeRepairedModel(model, bytes)
+  })
+
+  ipcMain.handle('openInBlender', async (_e, model: string, blenderPath: string | null) => {
+    await openInBlender(model, blenderPath)
+  })
+
+  ipcMain.handle('detectBlender', async () => {
+    return findBlender(null)
   })
 
   ipcMain.handle('getLastFolder', async () => {

@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
 const moveModel = vi.fn()
+const openInBlender = vi.fn()
 vi.mock('../ipc/api', () => ({
   api: {
     moveModel: (...args: unknown[]) => moveModel(...args),
+    openInBlender: (...args: unknown[]) => openInBlender(...args),
     scanFolder: vi.fn(),
     readMetadataBatch: vi.fn(),
   },
@@ -19,6 +21,7 @@ const PATH = '/root/a.stl'
 beforeEach(() => {
   useUiStore.setState(useUiStore.getInitialState())
   moveModel.mockReset().mockResolvedValue(null)
+  openInBlender.mockReset().mockResolvedValue(undefined)
 })
 
 describe('<FileActionsMenu/>', () => {
@@ -27,7 +30,7 @@ describe('<FileActionsMenu/>', () => {
     expect(screen.queryByRole('menu')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'File actions' }))
     expect(screen.getByRole('menu')).toBeInTheDocument()
-    for (const name of ['Rename', 'Copy', 'Move', 'Delete']) {
+    for (const name of ['Open in Blender', 'Rename', 'Copy', 'Move', 'Delete']) {
       expect(screen.getByRole('menuitem', { name })).toBeInTheDocument()
     }
   })
@@ -55,5 +58,13 @@ describe('<FileActionsMenu/>', () => {
     expect(moveModel).toHaveBeenCalledWith(PATH)
     // Move uses the native folder picker, not the fileAction dialog state.
     expect(useUiStore.getState().fileAction).toBeNull()
+  })
+
+  it('Open in Blender launches Blender for this path and closes the menu', () => {
+    render(<FileActionsMenu path={PATH} />)
+    fireEvent.click(screen.getByRole('button', { name: 'File actions' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Open in Blender' }))
+    expect(openInBlender).toHaveBeenCalledWith(PATH, null)
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 })
