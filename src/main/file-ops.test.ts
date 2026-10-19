@@ -72,6 +72,27 @@ describe('renameModel', () => {
   })
 })
 
+describe('renameModel case-only', () => {
+  it('renames when only the letter case changes (case-insensitive filesystems included)', async () => {
+    const { path: newPath } = await renameModel(model, 'Girl.stl')
+    expect(newPath).toBe(path.join(dir, 'Girl.stl'))
+
+    // readdir reports the real on-disk casing (stat can't tell on APFS/NTFS).
+    expect((await fs.readdir(dir)).filter((n) => n.endsWith('.stl'))).toEqual(['Girl.stl'])
+    expect(await fs.readdir(path.join(dir, '.thumb'))).toEqual(['Girl.stl.v6_studio.png'])
+    expect(await fs.readdir(path.join(dir, '.linked'))).toEqual(['Girl.stl.png'])
+    expect(await fs.readdir(path.join(dir, '.meta'))).toEqual(['Girl.stl.json'])
+    const meta = JSON.parse(await fs.readFile(path.join(dir, '.meta', 'Girl.stl.json'), 'utf8'))
+    expect(meta.linkedImage).toBe('Girl.stl.png')
+    expect((await fs.readFile(newPath)).toString()).toBe('STL-BYTES')
+  })
+
+  it('still refuses to overwrite a genuinely different file', async () => {
+    await fs.writeFile(path.join(dir, 'other.stl'), 'OTHER')
+    await expect(renameModel(model, 'other.stl')).rejects.toThrow(/already exists/)
+  })
+})
+
 describe('copyModel', () => {
   it('duplicates the model and sidecars under the new name, leaving the original', async () => {
     const { path: newPath } = await copyModel(model, 'girl2.stl')

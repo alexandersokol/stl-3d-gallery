@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import type { Metadata, ScanResult } from '../shared/types'
 
 const scanResult: ScanResult = {
@@ -84,6 +84,7 @@ vi.mock('./ipc/api', () => ({
     removeLinkedImage: (...args: unknown[]) => removeLinkedImage(...args),
     onOpenFile: (...args: [(path: string) => void]) => onOpenFile(...args),
     getStartupFolder: (...args: unknown[]) => getStartupFolder(...args),
+    detectBlender: async () => null,
   },
 }))
 
@@ -371,6 +372,53 @@ describe('<App/> keyboard shortcuts', () => {
 
     fireEvent.keyDown(colorInput, { key: 'f' })
     expect(useUiStore.getState().showFilmstrip).toBe(true)
+  })
+})
+
+describe('<App/> keyboard shortcuts while a modal is open', () => {
+  async function openViewerWithTwoFiles() {
+    scanFolder.mockResolvedValue(twoFileScanResult)
+    await useUiStore.getState().openFolder('/root')
+    useUiStore.getState().select(0)
+    render(<App />)
+    await waitFor(() => expect(readFileBytes).toHaveBeenCalled())
+  }
+
+  it('Escape closes the Delete dialog but stays in the viewer', async () => {
+    await openViewerWithTwoFiles()
+    act(() => useUiStore.getState().beginFileAction('delete', '/root/a.stl'))
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(useUiStore.getState().fileAction).toBeNull()
+    expect(useUiStore.getState().mode).toBe('viewer')
+  })
+
+  it('Escape closes Settings but stays in the viewer', async () => {
+    await openViewerWithTwoFiles()
+    act(() => useUiStore.getState().openSettings())
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(useUiStore.getState().settingsOpen).toBe(false)
+    expect(useUiStore.getState().mode).toBe('viewer')
+  })
+
+  it('arrows, F, I and Delete do nothing behind an open dialog', async () => {
+    await openViewerWithTwoFiles()
+    act(() => useUiStore.getState().openSettings())
+
+    for (const key of ['ArrowRight', 'f', 'i', 'Delete']) fireEvent.keyDown(document, { key })
+    const s = useUiStore.getState()
+    expect(s.selectedIndex).toBe(0)
+    expect(s.showFilmstrip).toBe(true)
+    expect(s.showInfo).toBe(true)
+    expect(s.fileAction).toBeNull()
+
+    act(() => {
+      useUiStore.getState().closeSettings()
+      useUiStore.getState().beginFileAction('delete', '/root/a.stl')
+    })
+    fireEvent.keyDown(document, { key: 'ArrowRight' })
+    expect(useUiStore.getState().selectedIndex).toBe(0)
   })
 })
 

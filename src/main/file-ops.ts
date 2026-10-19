@@ -65,6 +65,26 @@ async function moveFile(src: string, dest: string): Promise<void> {
   }
 }
 
+// True when `a` and `b` name the same file on disk -- e.g. `girl.stl` and
+// `Girl.stl` on a case-insensitive filesystem (macOS/Windows defaults).
+async function isSameFile(a: string, b: string): Promise<boolean> {
+  try {
+    const [sa, sb] = await Promise.all([fs.stat(a), fs.stat(b)])
+    return sa.dev === sb.dev && sa.ino === sb.ino
+  } catch (e: any) {
+    if (e.code === 'ENOENT') return false
+    throw e
+  }
+}
+
+// A case-only rename (`girl.stl` -> `Girl.stl`), done via a temporary name so
+// the new casing sticks on every filesystem, case-insensitive ones included.
+async function renameCaseOnly(src: string, dest: string): Promise<void> {
+  const tmp = `${src}.renaming-${process.pid}-${Date.now()}`
+  await fs.rename(src, tmp)
+  await fs.rename(tmp, dest)
+}
+
 async function copyFileTo(src: string, dest: string): Promise<void> {
   await fs.mkdir(path.dirname(dest), { recursive: true })
   await fs.copyFile(src, dest)
@@ -104,12 +124,16 @@ async function renameOrCopy(
 
   if (op === 'rename' && newBase === oldBase) return { path: modelPath } // no-op
 
-  if (await pathExists(newModelPath)) {
+  // On a case-insensitive filesystem a case-only rename's target "exists" --
+  // as the model itself. That's not a collision; any other existing file is.
+  // (Copying onto that alias would clobber the source, so copy always checks.)
+  const caseOnly = op === 'rename' && (await isSameFile(modelPath, newModelPath))
+  if (!caseOnly && (await pathExists(newModelPath))) {
     throw new Error(`A file named "${newBase}" already exists in this folder.`)
   }
 
   const sidecars = await listSidecars(dir, oldBase)
-  const transfer = op === 'rename' ? moveFile : copyFileTo
+  const transfer = caseOnly ? renameCaseOnly : op === 'rename' ? moveFile : copyFileTo
 
   await transfer(modelPath, newModelPath)
   for (const { hiddenDir, entry } of sidecars) {

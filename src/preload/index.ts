@@ -23,6 +23,8 @@ const api: Api = {
   moveModel: (model) => ipcRenderer.invoke('moveModel', model),
   deleteModel: (model) => ipcRenderer.invoke('deleteModel', model),
   writeStlFile: (model, bytes) => ipcRenderer.invoke('writeStlFile', model, bytes),
+  openInBlender: (model, blenderPath) => ipcRenderer.invoke('openInBlender', model, blenderPath),
+  detectBlender: () => ipcRenderer.invoke('detectBlender'),
   getLastFolder: () => ipcRenderer.invoke('getLastFolder'),
   setLastFolder: (dir) => ipcRenderer.invoke('setLastFolder', dir),
   onOpenFile: (cb) => ipcRenderer.on('open-file', (_e, path: string) => cb(path)),

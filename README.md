@@ -27,8 +27,11 @@ one codebase.
   subfolders.
 - 📊 **Model info.** File size, triangle/vertex counts, and bounding‑box
   dimensions.
-- ⚙️ **Settings.** Camera navigation mode (fly‑through vs. zoom‑to‑surface) and
-  the thumbnail render preset.
+- 🟠 **Open in Blender.** One click (Info panel or a tile's ⋮ menu) launches
+  Blender with the model imported into your startup scene, in millimetres, and
+  framed in the viewport. Blender is auto‑detected, or set its path in Settings.
+- ⚙️ **Settings.** Camera navigation mode (fly‑through vs. zoom‑to‑surface),
+  the thumbnail render preset, and the Blender executable.
 - 🔗 **File association.** Can be set as the default app for `.stl` files —
   double‑click a model to open it straight in the viewer.
 - 🌙 **Dark / light theme**, and a collapsible filmstrip and info panel for a
@@ -126,6 +129,7 @@ architecture, data formats, the viewer, performance, tech stack, and testing.
 
 ## Scope
 
-STL only (no OBJ/3MF/STEP), no mesh editing or repair, and no persistent
+STL only (no OBJ/3MF/STEP), no mesh editing (beyond the non‑destructive
+manifold repair), and no persistent
 multi‑root library — the app opens one folder at a time. See
 [`wiki/01-overview.md`](wiki/01-overview.md) for the full in/out‑of‑scope list.

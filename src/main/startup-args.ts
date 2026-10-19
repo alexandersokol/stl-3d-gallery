@@ -18,3 +18,15 @@ export function parseStartupFolder(argv: string[]): string | null {
   }
   return null
 }
+
+// The .stl a Windows/Linux file-association launch passes on the command line
+// (macOS uses the 'open-file' event instead). Used for both the first launch
+// (process.argv) and a 'second-instance' event's argv, where Electron may add
+// Chromium switches around it -- so take the last non-switch .stl argument.
+export function findStlArg(argv: string[]): string | null {
+  for (let i = argv.length - 1; i >= 1; i--) {
+    const arg = argv[i]
+    if (!arg.startsWith('-') && arg.toLowerCase().endsWith('.stl')) return arg
+  }
+  return null
+}
